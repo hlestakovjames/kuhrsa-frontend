@@ -306,12 +306,14 @@ function isActivePath(pathname: string, href: string) {
   );
 }
 
+function shouldWrapNavigationLabel(label: string) {
+  return label.length > 20;
+}
+
 export default function SiteHeader() {
   const pathname = usePathname();
-
   const [menuOpen, setMenuOpen] = useState(false);
-  const [quickLinksOpen, setQuickLinksOpen] =
-    useState(false);
+  const [quickLinksOpen, setQuickLinksOpen] = useState(false);
 
   const contextualNavigation = getNavigation(pathname);
 
@@ -357,16 +359,18 @@ export default function SiteHeader() {
           aria-label="Primary navigation"
         >
           {navigationItems.map((item) => {
-            const isActive = isActivePath(
-              pathname,
-              item.href,
-            );
+            const isActive = isActivePath(pathname, item.href);
+            const shouldWrap = shouldWrapNavigationLabel(item.label);
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative whitespace-nowrap text-sm font-semibold transition ${
+                className={`relative text-center text-sm font-semibold transition ${
+                  shouldWrap
+                    ? "max-w-[220px] leading-5"
+                    : "whitespace-nowrap"
+                } ${
                   isActive
                     ? "text-[#0B2633]"
                     : "text-white/90 hover:text-white"
@@ -396,9 +400,7 @@ export default function SiteHeader() {
 
               <span
                 className={`text-xs transition-transform ${
-                  quickLinksOpen
-                    ? "rotate-180"
-                    : ""
+                  quickLinksOpen ? "rotate-180" : ""
                 }`}
               >
                 ▾
@@ -414,14 +416,9 @@ export default function SiteHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() =>
-                      setQuickLinksOpen(false)
-                    }
+                    onClick={() => setQuickLinksOpen(false)}
                     className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      isActivePath(
-                        pathname,
-                        item.href,
-                      )
+                      isActivePath(pathname, item.href)
                         ? "bg-[#BFF2F8] text-[#168DB8]"
                         : "text-[#0B2633] hover:bg-[#F4FAFC] hover:text-[#168DB8]"
                     }`}
@@ -448,14 +445,10 @@ export default function SiteHeader() {
         {/* Mobile Menu Button */}
         <button
           type="button"
-          onClick={() =>
-            setMenuOpen((open) => !open)
-          }
+          onClick={() => setMenuOpen((open) => !open)}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15 xl:hidden"
           aria-label={
-            menuOpen
-              ? "Close navigation menu"
-              : "Open navigation menu"
+            menuOpen ? "Close navigation menu" : "Open navigation menu"
           }
           aria-expanded={menuOpen}
         >
@@ -474,18 +467,13 @@ export default function SiteHeader() {
           >
             <div className="space-y-1">
               {navigationItems.map((item) => {
-                const isActive = isActivePath(
-                  pathname,
-                  item.href,
-                );
+                const isActive = isActivePath(pathname, item.href);
 
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() =>
-                      setMenuOpen(false)
-                    }
+                    onClick={() => setMenuOpen(false)}
                     className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
                       isActive
                         ? "bg-white text-[#0B2633]"
@@ -508,14 +496,9 @@ export default function SiteHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() =>
-                      setMenuOpen(false)
-                    }
+                    onClick={() => setMenuOpen(false)}
                     className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      isActivePath(
-                        pathname,
-                        item.href,
-                      )
+                      isActivePath(pathname, item.href)
                         ? "bg-white text-[#168DB8]"
                         : "text-white hover:bg-white/10"
                     }`}
