@@ -2,13 +2,41 @@ import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
 
 const items = [
-  ["History", "Key milestones and the development of KUHRSA.", "#history"],
-  ["Mission & Vision", "The direction and purpose of the association.", "#mission"],
-  ["Core Values", "The principles that guide KUHRSA.", "#values"],
-  ["Objectives", "What KUHRSA is established to achieve.", "#objectives"],
-  ["Leadership", "Current leadership and office bearers.", "#leadership"],
-  ["Governance", "Governance, constitution and organizational framework.", "#governance"],
-  ["Organizational Structure", "How KUHRSA is organized.", "#structure"],
+  [
+    "History",
+    "Key milestones and the development of KUHRSA.",
+    "/about/history",
+  ],
+  [
+    "Mission & Vision",
+    "The direction and purpose of the association.",
+    "/about/mission-vision",
+  ],
+  [
+    "Core Values",
+    "The principles that guide KUHRSA.",
+    "/about/core-values",
+  ],
+  [
+    "Objectives",
+    "What KUHRSA is established to achieve.",
+    "/about/objectives",
+  ],
+  [
+    "Leadership",
+    "Current leadership and office bearers.",
+    "/about/leadership",
+  ],
+  [
+    "Governance",
+    "Governance, constitution and organizational framework.",
+    "/about/governance",
+  ],
+  [
+    "Organizational Structure",
+    "How KUHRSA is organized.",
+    "/about/organizational-structure",
+  ],
 ];
 
 export default function AboutPage() {
@@ -66,7 +94,9 @@ export default function AboutPage() {
 
               <div className="mt-7 grid gap-6">
                 <div>
-                  <p className="text-3xl font-black text-[#0B2633]">KUHRSA</p>
+                  <p className="text-3xl font-black text-[#0B2633]">
+                    KUHRSA
+                  </p>
                   <p className="mt-1 text-sm text-black/55">
                     Kisii University Human Resource Students&apos; Association
                   </p>
@@ -117,7 +147,7 @@ export default function AboutPage() {
             {items.map(([title, text, href], index) => (
               <Link
                 key={title}
-                href={`/about${href}`}
+                href={href}
                 className={`rounded-3xl p-6 transition hover:-translate-y-1 ${
                   index % 3 === 0
                     ? "bg-white ring-1 ring-black/10"

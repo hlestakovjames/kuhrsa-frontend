@@ -38,10 +38,17 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/about": {
     label: "About KUHRSA",
     items: [
-      { label: "About KUHRSA", href: "/about" },
-      { label: "Leadership", href: "/about#leadership" },
-      { label: "Mission & Vision", href: "/about#mission" },
-      { label: "Structure", href: "/about#structure" },
+      { label: "Who We Are", href: "/about" },
+      { label: "History", href: "/about/history" },
+      { label: "Mission & Vision", href: "/about/mission-vision" },
+      { label: "Core Values", href: "/about/core-values" },
+      { label: "Objectives", href: "/about/objectives" },
+      { label: "Leadership", href: "/about/leadership" },
+      { label: "Governance", href: "/about/governance" },
+      {
+      label: "Organizational Structure",
+      href: "/about/organizational-structure",
+      },
     ],
   },
 
