@@ -17,6 +17,7 @@ type SiteNavigation = {
 
 const mainNavigation: NavItem[] = [
   { label: "About", href: "/about" },
+  { label: "Programs", href: "/programs" },
   { label: "Membership", href: "/membership" },
   { label: "News", href: "/news" },
   { label: "Blog", href: "/blog" },
@@ -46,9 +47,21 @@ const siteNavigations: Record<string, SiteNavigation> = {
       { label: "Leadership", href: "/about/leadership" },
       { label: "Governance", href: "/about/governance" },
       {
-      label: "Organizational Structure",
-      href: "/about/organizational-structure",
+        label: "Organizational Structure",
+        href: "/about/organizational-structure",
       },
+    ],
+  },
+
+  "/programs": {
+    label: "Programs",
+    items: [
+      { label: "Programs Home", href: "/programs" },
+      { label: "Academic & Professional Development", href: "/programs#academic" },
+      { label: "Career Development", href: "/programs#career" },
+      { label: "Leadership Development", href: "/programs#leadership" },
+      { label: "Mentorship", href: "/programs#mentorship" },
+      { label: "Community Engagement", href: "/programs#community" },
     ],
   },
 
@@ -260,6 +273,7 @@ export default function SiteHeader() {
               aria-haspopup="menu"
             >
               Quick Links
+
               <span
                 className={`text-xs transition-transform ${
                   quickLinksOpen ? "rotate-180" : ""
@@ -309,7 +323,9 @@ export default function SiteHeader() {
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15 xl:hidden"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            menuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
           aria-expanded={menuOpen}
         >
           <span className="text-2xl leading-none">
@@ -318,70 +334,13 @@ export default function SiteHeader() {
         </button>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Navigation */}
       {menuOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation menu"
-          onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-black/35 xl:hidden"
-        />
-      )}
-
-      {/* Mobile Sidebar */}
-      <aside
-        className={`fixed right-0 top-0 z-50 flex h-screen w-[85%] max-w-[380px] flex-col bg-[#2BB9EC] shadow-2xl transition-transform duration-300 ease-out xl:hidden ${
-          menuOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-        aria-hidden={!menuOpen}
-      >
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between border-b border-white/15 px-5 py-4">
-          <Link
-            href="/"
-            onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-3"
+        <div className="border-t border-white/15 bg-[#168DB8] xl:hidden">
+          <nav
+            className="mx-auto grid max-w-7xl gap-1 px-5 py-4 lg:px-8"
+            aria-label="Mobile navigation"
           >
-            <div className="relative h-11 w-11 overflow-hidden rounded-full bg-white">
-              <Image
-                src="/images/kuhrsa_logo.jpeg"
-                alt="KUHRSA official logo"
-                fill
-                sizes="44px"
-                className="object-contain p-1"
-              />
-            </div>
-
-            <div>
-              <div className="text-lg font-black tracking-tight text-[#0B2633]">
-                KUHRSA
-              </div>
-
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-white">
-                Student Association
-              </div>
-            </div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setMenuOpen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/40 text-2xl leading-none text-white transition hover:bg-white/15"
-            aria-label="Close navigation menu"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Sidebar Content */}
-        <div className="flex-1 overflow-y-auto px-5 py-6">
-          <div className="mb-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0B2633]/60">
-              {contextualNavigation?.label ?? "KUHRSA"}
-            </p>
-          </div>
-
-          <nav aria-label="Mobile navigation" className="grid gap-1">
             {navigationItems.map((item) => {
               const isActive = isActivePath(pathname, item.href);
 
@@ -390,47 +349,40 @@ export default function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className={`rounded-xl px-4 py-3.5 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     isActive
-                      ? "bg-white text-[#0B2633] shadow-sm"
-                      : "text-white hover:bg-white/15"
+                      ? "bg-white text-[#0B2633]"
+                      : "text-white hover:bg-white/10"
                   }`}
                 >
                   {item.label}
                 </Link>
               );
             })}
+
+            <div className="my-2 border-t border-white/15" />
+
+            {quickLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="mt-2 rounded-xl bg-[#F700BA] px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-[#CE26A4]"
+            >
+              Member Login
+            </Link>
           </nav>
-
-          {/* Mobile Quick Links */}
-          <div className="mt-7 border-t border-white/20 pt-6">
-            <p className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-[#0B2633]/60">
-              Quick Links
-            </p>
-
-            <div className="mt-3 grid gap-1">
-              {quickLinks.map((item) => {
-                const isActive = isActivePath(pathname, item.href);
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className={`rounded-xl px-4 py-3.5 text-sm font-semibold transition ${
-                      isActive
-                        ? "bg-white text-[#0B2633] shadow-sm"
-                        : "text-white hover:bg-white/15"
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
         </div>
-      </aside>
+      )}
     </header>
   );
 }
