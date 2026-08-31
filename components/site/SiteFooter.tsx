@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const exploreLinks = [
@@ -22,13 +23,19 @@ export default function SiteFooter() {
     <footer className="bg-[#0B2633] text-white">
       <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
         <div className="lg:col-span-1">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#168DB8] text-sm font-black">
-              K
-            </span>
-
-            <span className="text-2xl font-black tracking-tight">
-              KUHRSA
+          <Link
+            href="/"
+            className="inline-flex items-center"
+            aria-label="KUHRSA home"
+          >
+            <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-white/20">
+              <Image
+                src="/images/kuhrsa_logo.jpeg"
+                alt="KUHRSA"
+                width={64}
+                height={64}
+                className="h-full w-full object-contain p-2"
+              />
             </span>
           </Link>
 
@@ -88,10 +95,10 @@ export default function SiteFooter() {
             </Link>
 
             <Link
-              href="/membership#join"
+              href="/membership"
               className="transition hover:text-white"
             >
-              Join KUHRSA
+              Membership
             </Link>
 
             <Link
@@ -108,9 +115,7 @@ export default function SiteFooter() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-sm text-white/45 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <p>© {new Date().getFullYear()} KUHRSA. All rights reserved.</p>
 
-          <p>
-            KUHRSA Public Website
-          </p>
+          <p>KUHRSA Public Website</p>
         </div>
       </div>
     </footer>
