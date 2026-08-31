@@ -18,20 +18,23 @@ type SiteNavigation = {
 const globalNavigation: SiteNavigation = {
   label: "KUHRSA",
   items: [
-    ["About", "/about"],
-    ["Membership", "/membership"],
-    ["News", "/news"],
-    ["Blog", "/blog"],
-    ["Announcements", "/announcements"],
-    ["Events", "/events"],
-    ["Activities", "/activities"],
-    ["Academic", "/academic"],
-    ["Resources", "/resources"],
-    ["Departments", "/departments"],
-    ["Gallery", "/gallery"],
-    ["Contact", "/contact"],
-  ].map(([label, href]) => ({ label, href })),
+    { label: "About", href: "/about" },
+    { label: "Membership", href: "/membership" },
+    { label: "News", href: "/news" },
+    { label: "Events", href: "/events" },
+    { label: "Activities", href: "/activities" },
+    { label: "Academic", href: "/academic" },
+  ],
 };
+
+const quickLinks: NavItem[] = [
+  { label: "Announcements", href: "/announcements" },
+  { label: "Blog", href: "/blog" },
+  { label: "Resources", href: "/resources" },
+  { label: "Departments", href: "/departments" },
+  { label: "Gallery", href: "/gallery" },
+  { label: "Contact", href: "/contact" },
+];
 
 const siteNavigations: Record<string, SiteNavigation> = {
   "/about": {
@@ -51,7 +54,6 @@ const siteNavigations: Record<string, SiteNavigation> = {
       { label: "Why Membership", href: "/membership#why" },
       { label: "How to Join", href: "/membership#join" },
       { label: "Benefits", href: "/membership#benefits" },
-      { label: "Activate Membership", href: "/activate-membership" },
     ],
   },
 
@@ -162,7 +164,7 @@ function getNavigation(pathname: string): SiteNavigation {
     .sort((a, b) => b.length - a.length)
     .find(
       (basePath) =>
-        pathname === basePath || pathname.startsWith(`${basePath}/`)
+        pathname === basePath || pathname.startsWith(`${basePath}/`),
     );
 
   return matchingPath
@@ -170,110 +172,141 @@ function getNavigation(pathname: string): SiteNavigation {
     : globalNavigation;
 }
 
+function isActiveLink(pathname: string, href: string) {
+  const [hrefPath] = href.split("#");
+
+  if (pathname === hrefPath) {
+    return true;
+  }
+
+  return (
+    hrefPath !== "/" &&
+    pathname.startsWith(`${hrefPath}/`)
+  );
+}
+
 export default function SiteHeader() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navigation = getNavigation(pathname);
-
   const isGlobalNavigation = pathname === "/";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/15 bg-[#2BB9EC] shadow-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-3 lg:px-8">
-        {/* Brand */}
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-3"
-          aria-label="KUHRSA home"
-          onClick={() => setMenuOpen(false)}
-        >
-          <div className="relative h-12 w-12 overflow-hidden rounded-full bg-white shadow-sm">
-            <Image
-              src="/images/kuhrsa_logo.jpeg"
-              alt="KUHRSA official logo"
-              fill
-              sizes="48px"
-              className="object-contain p-1"
-              priority
-            />
+    <>
+      <header className="sticky top-0 z-50 border-b border-white/15 bg-[#2BB9EC] shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 lg:px-8">
+          {/* Brand */}
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-3"
+            aria-label="KUHRSA home"
+            onClick={() => setMenuOpen(false)}
+          >
+            <div className="relative h-12 w-12 overflow-hidden rounded-full bg-white shadow-sm">
+              <Image
+                src="/images/kuhrsa_logo.jpeg"
+                alt="KUHRSA official logo"
+                fill
+                sizes="48px"
+                className="object-contain p-1"
+                priority
+              />
+            </div>
+
+            <span>
+              <span className="block text-xl font-black tracking-tight text-white">
+                KUHRSA
+              </span>
+
+              <span className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-[#0B2633] sm:block">
+                Student Association
+              </span>
+            </span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav
+            className="hidden flex-1 items-center justify-center gap-5 xl:flex"
+            aria-label={`${navigation.label} navigation`}
+          >
+            {navigation.items.map((item) => {
+              const isActive = isActiveLink(pathname, item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative text-sm font-semibold transition ${
+                    isActive
+                      ? "text-[#0B2633]"
+                      : "text-white/90 hover:text-white"
+                  }`}
+                >
+                  {item.label}
+
+                  {isActive && (
+                    <span className="absolute -bottom-2 left-0 right-0 mx-auto h-0.5 rounded-full bg-[#0B2633]" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Desktop Actions */}
+          <div className="hidden items-center gap-2 xl:flex">
+            {isGlobalNavigation && (
+              <Link
+                href="/register"
+                className="rounded-full bg-white px-5 py-2 text-sm font-bold text-[#168DB8] shadow-sm transition hover:bg-white/90"
+              >
+                Register
+              </Link>
+            )}
+
+            <Link
+              href="/login"
+              className="rounded-full bg-[#F700BA] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#CE26A4]"
+            >
+              Login
+            </Link>
           </div>
 
-          <span>
-            <span className="block text-xl font-black tracking-tight text-[#0B2633]">
-              KUHRSA
-            </span>
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-2 xl:hidden">
+            <Link
+              href="/login"
+              className="rounded-full bg-[#F700BA] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#CE26A4]"
+            >
+              Login
+            </Link>
 
-            <span className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:block">
-              Student Association
-            </span>
-          </span>
-        </Link>
-
-        {/* Desktop Navigation */}
-        <nav
-          className="hidden flex-1 items-center justify-center gap-5 xl:flex"
-          aria-label="Primary navigation"
-        >
-          {navigation.items.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" &&
-                pathname.startsWith(`${item.href}/`));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative text-sm font-semibold transition ${
-                  isActive
-                    ? "text-[#0B2633]"
-                    : "text-white/90 hover:text-white"
-                }`}
-              >
-                {item.label}
-
-                {isActive && (
-                  <span className="absolute -bottom-2 left-0 right-0 mx-auto h-0.5 rounded-full bg-[#0B2633]" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Desktop Login */}
-        <div className="hidden items-center xl:flex">
-          <Link
-            href="/login"
-            className="rounded-full bg-[#F700BA] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#CE26A4]"
-          >
-            Login
-          </Link>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15"
+              aria-label={
+                menuOpen
+                  ? "Close navigation menu"
+                  : "Open navigation menu"
+              }
+              aria-expanded={menuOpen}
+            >
+              <span className="text-2xl leading-none">
+                {menuOpen ? "×" : "☰"}
+              </span>
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* Mobile Menu Button */}
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15 xl:hidden"
-          aria-label={
-            menuOpen ? "Close navigation menu" : "Open navigation menu"
-          }
-          aria-expanded={menuOpen}
-        >
-          <span className="text-2xl leading-none">
-            {menuOpen ? "×" : "☰"}
-          </span>
-        </button>
-      </div>
-
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Overlay */}
       {menuOpen && (
         <button
           type="button"
           aria-label="Close navigation menu"
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 top-0 z-40 bg-black/35 xl:hidden"
+          className="fixed inset-0 z-40 bg-black/35 xl:hidden"
         />
       )}
 
@@ -291,7 +324,7 @@ export default function SiteHeader() {
             onClick={() => setMenuOpen(false)}
             className="flex items-center gap-3"
           >
-            <div className="relative h-11 w-11 overflow-hidden rounded-full bg-white">
+            <div className="relative h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
               <Image
                 src="/images/kuhrsa_logo.jpeg"
                 alt="KUHRSA official logo"
@@ -302,10 +335,11 @@ export default function SiteHeader() {
             </div>
 
             <div>
-              <div className="text-lg font-black tracking-tight text-[#0B2633]">
+              <div className="text-lg font-black tracking-tight text-white">
                 KUHRSA
               </div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-white">
+
+              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#0B2633]">
                 Student Association
               </div>
             </div>
@@ -321,37 +355,34 @@ export default function SiteHeader() {
           </button>
         </div>
 
-        {/* Current Mini-site */}
-        <div className="border-b border-white/15 px-6 py-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0B2633]">
-            {isGlobalNavigation ? "Main Navigation" : "Current Section"}
+        {/* Current Section */}
+        <div className="border-b border-white/15 px-5 py-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/65">
+            Current section
           </p>
 
-          <h2 className="mt-1 text-2xl font-black text-white">
+          <p className="mt-1 text-lg font-black text-white">
             {navigation.label}
-          </h2>
+          </p>
         </div>
 
-        {/* Navigation Links */}
+        {/* Sidebar Navigation */}
         <nav
-          className="flex-1 overflow-y-auto px-4 py-4"
-          aria-label="Mobile navigation"
+          className="flex-1 overflow-y-auto px-4 py-5"
+          aria-label={`Mobile ${navigation.label} navigation`}
         >
           <div className="grid gap-1">
             {navigation.items.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" &&
-                  pathname.startsWith(`${item.href}/`));
+              const isActive = isActiveLink(pathname, item.href);
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className={`rounded-xl px-4 py-3.5 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
                     isActive
-                      ? "bg-white text-[#0B2633]"
+                      ? "bg-white text-[#168DB8]"
                       : "text-white/90 hover:bg-white/15 hover:text-white"
                   }`}
                 >
@@ -360,29 +391,54 @@ export default function SiteHeader() {
               );
             })}
           </div>
-        </nav>
 
-        {/* Sidebar Bottom Actions */}
-        <div className="border-t border-white/15 px-5 py-5">
+          {/* Global Secondary Links */}
+          {isGlobalNavigation && (
+            <>
+              <div className="my-5 border-t border-white/15" />
+
+              <p className="px-4 pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/60">
+                Quick Links
+              </p>
+
+              <div className="grid gap-1">
+                {quickLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-xl px-4 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/15 hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Register */}
+          <div className="my-5 border-t border-white/15 pt-5">
+            <Link
+              href="/register"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-[#168DB8] transition hover:bg-white/90"
+            >
+              Register
+            </Link>
+          </div>
+
+          {/* Return to Global Site */}
           {!isGlobalNavigation && (
             <Link
               href="/"
               onClick={() => setMenuOpen(false)}
-              className="mb-3 flex items-center justify-center rounded-full border border-white/40 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+              className="mb-5 flex items-center justify-center rounded-full border border-white/40 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/15"
             >
-              ← KUHRSA Home
+              ← Back to KUHRSA
             </Link>
           )}
-
-          <Link
-            href="/login"
-            onClick={() => setMenuOpen(false)}
-            className="flex items-center justify-center rounded-full bg-[#F700BA] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#CE26A4]"
-          >
-            Login
-          </Link>
-        </div>
+        </nav>
       </aside>
-    </header>
+    </>
   );
 }
