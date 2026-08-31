@@ -4,32 +4,42 @@ import Link from "next/link";
 const exploreLinks = [
   ["About", "/about"],
   ["Membership", "/membership"],
+  ["Programs", "/programs"],
   ["News", "/news"],
   ["Blog", "/blog"],
   ["Events", "/events"],
+  ["Activities", "/activities"],
   ["Contact", "/contact"],
+];
+
+const programLinks = [
+  ["Academic & Professional Development", "/programs/academic"],
+  ["Career Development", "/programs/career"],
+  ["Leadership Development", "/programs/leadership"],
+  ["Mentorship", "/programs/mentorship"],
+  ["Community Engagement", "/programs/community"],
 ];
 
 const quickLinks = [
   ["Announcements", "/announcements"],
-  ["Activities", "/activities"],
-  ["Academic", "/academic"],
   ["Resources", "/resources"],
   ["Departments", "/departments"],
   ["Gallery", "/gallery"],
+  ["Downloads", "/resources/downloads"],
 ];
 
 const portalLinks = [
-  ["Member Login", "/login"],
-  ["Register", "/register"],
+  ["Member Portal", "/login"],
+  ["Join Us", "/register"],
 ];
 
 export default function SiteFooter() {
   return (
     <footer className="bg-[#0B2633] text-white">
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
+      {/* Main Footer */}
+      <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:grid-cols-2 lg:grid-cols-5 lg:px-8">
         {/* Brand */}
-        <div>
+        <div className="lg:col-span-1">
           <Link
             href="/"
             className="inline-flex items-center"
@@ -50,6 +60,13 @@ export default function SiteFooter() {
             Connecting KUHRSA members through information, engagement,
             academic support and a strong student community.
           </p>
+
+          <Link
+            href="/register"
+            className="mt-6 inline-flex rounded-full bg-[#F700BA] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#CE26A4]"
+          >
+            Join Us
+          </Link>
         </div>
 
         {/* Explore */}
@@ -60,6 +77,25 @@ export default function SiteFooter() {
 
           <div className="mt-5 grid gap-3 text-sm text-white/65">
             {exploreLinks.map(([label, href]) => (
+              <Link
+                key={href}
+                href={href}
+                className="transition hover:text-white"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Programs */}
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-[0.14em] text-white/90">
+            Programs
+          </h3>
+
+          <div className="mt-5 grid gap-3 text-sm leading-5 text-white/65">
+            {programLinks.map(([label, href]) => (
               <Link
                 key={href}
                 href={href}
@@ -111,7 +147,7 @@ export default function SiteFooter() {
               </Link>
             ))}
 
-            {/* Authorized portals */}
+            {/* Authorized Access */}
             <div className="mt-2 border-t border-white/10 pt-4">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
                 Authorized Access
@@ -137,7 +173,7 @@ export default function SiteFooter() {
         </div>
       </div>
 
-      {/* Contact strip */}
+      {/* Contact Strip */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-6 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <div>
@@ -159,7 +195,7 @@ export default function SiteFooter() {
         </div>
       </div>
 
-      {/* Bottom bar */}
+      {/* Bottom Bar */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-sm text-white/45 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <p>© {new Date().getFullYear()} KUHRSA. All rights reserved.</p>
