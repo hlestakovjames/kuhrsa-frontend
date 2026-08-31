@@ -77,7 +77,7 @@ export default function MembershipSupportPage() {
       <section className="mx-auto max-w-7xl px-5 py-14 lg:px-8 lg:py-20">
         <div className="max-w-3xl">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#168DB8]">
-            We're here to help
+            We&apos;re here to help
           </p>
 
           <h2 className="mt-3 text-3xl font-black tracking-tight text-[#0B2633] md:text-4xl">

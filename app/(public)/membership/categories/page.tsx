@@ -42,7 +42,7 @@ const categories = [
       "Individuals recognized by KUHRSA for distinguished support, contribution or service to the association, HR education or the university community.",
     points: [
       "Recognized for outstanding contribution",
-      "Support the association's broader mission",
+      "Support the association&apos;s broader mission",
       "Provide experience, guidance or professional insight",
     ],
   },
@@ -73,7 +73,7 @@ export default function MembershipCategoriesPage() {
             KUHRSA brings together members at different stages of their
             academic and professional journey. Each category supports
             participation, connection and contribution while maintaining the
-            association's student-focused purpose.
+            association&apos;s student-focused purpose.
           </p>
         </div>
 

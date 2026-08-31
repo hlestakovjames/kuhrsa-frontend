@@ -70,7 +70,7 @@ export default function MembershipFeesPage() {
               </h2>
 
               <p className="mt-5 max-w-2xl text-base leading-8 text-white/70">
-                KUHRSA's official membership registration workflow will provide
+                KUHRSA&apos;s official membership registration workflow will provide
                 the applicable fee, payment instructions and confirmation
                 requirements at the time of application.
               </p>
@@ -126,13 +126,13 @@ export default function MembershipFeesPage() {
             <p className="mt-4 text-sm leading-7 text-black/60">
               Members and prospective members should avoid sending membership
               payments to personal or unofficial accounts. Payment
-              instructions should come from KUHRSA's authorized membership
+              instructions should come from KUHRSA&apos;s authorized membership
               process.
             </p>
 
             <p className="mt-4 text-sm leading-7 text-black/60">
               As the KUHRSA membership system develops, payment confirmation
-              can be linked directly to the member's application and account.
+              can be linked directly to the member&apos;s application and account.
             </p>
           </div>
 

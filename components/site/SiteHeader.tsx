@@ -109,9 +109,30 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/news": {
     label: "News",
     items: [
-      { label: "News Home", href: "/news" },
-      { label: "Latest News", href: "/news#latest" },
-      { label: "Featured", href: "/news#featured" },
+      {
+        label: "News Home",
+        href: "/news",
+      },
+      {
+        label: "Latest News",
+        href: "/news/latest",
+      },
+      {
+        label: "Featured News",
+        href: "/news/featured",
+      },
+      {
+        label: "Categories",
+        href: "/news/categories",
+      },
+      {
+        label: "Archive",
+        href: "/news/archive",
+      },
+      {
+        label: "Search News",
+        href: "/news/search",
+      },
     ],
   },
 

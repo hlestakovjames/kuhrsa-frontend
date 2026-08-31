@@ -73,7 +73,7 @@ export default function MembershipRequirementsPage() {
           <p className="mt-5 text-base leading-8 text-black/60">
             Membership requirements help KUHRSA maintain accurate member
             records and ensure that applications can be processed efficiently.
-            Specific requirements may be updated as the association's
+            Specific requirements may be updated as the association&apos;s
             membership policies develop.
           </p>
         </div>
