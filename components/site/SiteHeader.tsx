@@ -17,8 +17,8 @@ type SiteNavigation = {
 
 const mainNavigation: NavItem[] = [
   { label: "About", href: "/about" },
-  { label: "Programs", href: "/programs" },
   { label: "Membership", href: "/membership" },
+  { label: "Programs", href: "/programs" },
   { label: "News", href: "/news" },
   { label: "Blog", href: "/blog" },
   { label: "Events", href: "/events" },
@@ -41,27 +41,30 @@ const siteNavigations: Record<string, SiteNavigation> = {
     items: [
       { label: "Who We Are", href: "/about" },
       { label: "History", href: "/about/history" },
-      { label: "Mission & Vision", href: "/about/mission-vision" },
-      { label: "Core Values", href: "/about/core-values" },
-      { label: "Objectives", href: "/about/objectives" },
-      { label: "Leadership", href: "/about/leadership" },
-      { label: "Governance", href: "/about/governance" },
+      {
+        label: "Mission & Vision",
+        href: "/about/mission-vision",
+      },
+      {
+        label: "Core Values",
+        href: "/about/core-values",
+      },
+      {
+        label: "Objectives",
+        href: "/about/objectives",
+      },
+      {
+        label: "Leadership",
+        href: "/about/leadership",
+      },
+      {
+        label: "Governance",
+        href: "/about/governance",
+      },
       {
         label: "Organizational Structure",
         href: "/about/organizational-structure",
       },
-    ],
-  },
-
-  "/programs": {
-    label: "Programs",
-    items: [
-      { label: "Programs Home", href: "/programs" },
-      { label: "Academic & Professional Development", href: "/programs#academic" },
-      { label: "Career Development", href: "/programs#career" },
-      { label: "Leadership Development", href: "/programs#leadership" },
-      { label: "Mentorship", href: "/programs#mentorship" },
-      { label: "Community Engagement", href: "/programs#community" },
     ],
   },
 
@@ -72,6 +75,36 @@ const siteNavigations: Record<string, SiteNavigation> = {
       { label: "Why Membership", href: "/membership#why" },
       { label: "How to Join", href: "/membership#join" },
       { label: "Benefits", href: "/membership#benefits" },
+    ],
+  },
+
+  "/programs": {
+    label: "Programs",
+    items: [
+      {
+        label: "All Programs",
+        href: "/programs",
+      },
+      {
+        label: "Academic & Professional Development",
+        href: "/programs/academic",
+      },
+      {
+        label: "Career Development",
+        href: "/programs/career",
+      },
+      {
+        label: "Leadership Development",
+        href: "/programs/leadership",
+      },
+      {
+        label: "Mentorship",
+        href: "/programs/mentorship",
+      },
+      {
+        label: "Community Engagement",
+        href: "/programs/community",
+      },
     ],
   },
 
@@ -98,9 +131,18 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/announcements": {
     label: "Announcements",
     items: [
-      { label: "Announcements Home", href: "/announcements" },
-      { label: "Latest Notices", href: "/announcements#latest" },
-      { label: "Important Updates", href: "/announcements#important" },
+      {
+        label: "Announcements Home",
+        href: "/announcements",
+      },
+      {
+        label: "Latest Notices",
+        href: "/announcements#latest",
+      },
+      {
+        label: "Important Updates",
+        href: "/announcements#important",
+      },
     ],
   },
 
@@ -108,19 +150,40 @@ const siteNavigations: Record<string, SiteNavigation> = {
     label: "Events",
     items: [
       { label: "Events Home", href: "/events" },
-      { label: "Upcoming Events", href: "/events#upcoming" },
-      { label: "Past Events", href: "/events#past" },
-      { label: "Event Calendar", href: "/events#calendar" },
+      {
+        label: "Upcoming Events",
+        href: "/events#upcoming",
+      },
+      {
+        label: "Past Events",
+        href: "/events#past",
+      },
+      {
+        label: "Event Calendar",
+        href: "/events#calendar",
+      },
     ],
   },
 
   "/activities": {
     label: "Activities",
     items: [
-      { label: "Activities Home", href: "/activities" },
-      { label: "Current Activities", href: "/activities#current" },
-      { label: "Past Activities", href: "/activities#past" },
-      { label: "Opportunities", href: "/activities#opportunities" },
+      {
+        label: "Activities Home",
+        href: "/activities",
+      },
+      {
+        label: "Current Activities",
+        href: "/activities#current",
+      },
+      {
+        label: "Past Activities",
+        href: "/activities#past",
+      },
+      {
+        label: "Opportunities",
+        href: "/activities#opportunities",
+      },
     ],
   },
 
@@ -128,28 +191,58 @@ const siteNavigations: Record<string, SiteNavigation> = {
     label: "Academic",
     items: [
       { label: "Academic Home", href: "/academic" },
-      { label: "Academic Updates", href: "/academic#updates" },
-      { label: "Opportunities", href: "/academic#opportunities" },
-      { label: "Academic Resources", href: "/academic#resources" },
+      {
+        label: "Academic Updates",
+        href: "/academic#updates",
+      },
+      {
+        label: "Opportunities",
+        href: "/academic#opportunities",
+      },
+      {
+        label: "Academic Resources",
+        href: "/academic#resources",
+      },
     ],
   },
 
   "/resources": {
     label: "Resources",
     items: [
-      { label: "Resources Home", href: "/resources" },
-      { label: "Academic Resources", href: "/resources#academic" },
-      { label: "Member Resources", href: "/resources#members" },
-      { label: "Downloads", href: "/resources#downloads" },
+      {
+        label: "Resources Home",
+        href: "/resources",
+      },
+      {
+        label: "Academic Resources",
+        href: "/resources#academic",
+      },
+      {
+        label: "Member Resources",
+        href: "/resources#members",
+      },
+      {
+        label: "Downloads",
+        href: "/resources#downloads",
+      },
     ],
   },
 
   "/departments": {
     label: "Departments",
     items: [
-      { label: "Departments Home", href: "/departments" },
-      { label: "Department Directory", href: "/departments#directory" },
-      { label: "Department Contacts", href: "/departments#contacts" },
+      {
+        label: "Departments Home",
+        href: "/departments",
+      },
+      {
+        label: "Department Directory",
+        href: "/departments#directory",
+      },
+      {
+        label: "Department Contacts",
+        href: "/departments#contacts",
+      },
     ],
   },
 
@@ -157,18 +250,36 @@ const siteNavigations: Record<string, SiteNavigation> = {
     label: "Gallery",
     items: [
       { label: "Gallery Home", href: "/gallery" },
-      { label: "Events", href: "/gallery#events" },
-      { label: "Activities", href: "/gallery#activities" },
-      { label: "KUHRSA Community", href: "/gallery#community" },
+      {
+        label: "Events",
+        href: "/gallery#events",
+      },
+      {
+        label: "Activities",
+        href: "/gallery#activities",
+      },
+      {
+        label: "KUHRSA Community",
+        href: "/gallery#community",
+      },
     ],
   },
 
   "/contact": {
     label: "Contact",
     items: [
-      { label: "Contact KUHRSA", href: "/contact" },
-      { label: "Get in Touch", href: "/contact#contact" },
-      { label: "Location", href: "/contact#location" },
+      {
+        label: "Contact KUHRSA",
+        href: "/contact",
+      },
+      {
+        label: "Get in Touch",
+        href: "/contact#contact",
+      },
+      {
+        label: "Location",
+        href: "/contact#location",
+      },
     ],
   },
 };
@@ -178,7 +289,8 @@ function getNavigation(pathname: string): SiteNavigation | null {
     .sort((a, b) => b.length - a.length)
     .find(
       (basePath) =>
-        pathname === basePath || pathname.startsWith(`${basePath}/`),
+        pathname === basePath ||
+        pathname.startsWith(`${basePath}/`),
     );
 
   return matchingPath ? siteNavigations[matchingPath] : null;
@@ -189,14 +301,17 @@ function isActivePath(pathname: string, href: string) {
 
   return (
     pathname === cleanHref ||
-    (cleanHref !== "/" && pathname.startsWith(`${cleanHref}/`))
+    (cleanHref !== "/" &&
+      pathname.startsWith(`${cleanHref}/`))
   );
 }
 
 export default function SiteHeader() {
   const pathname = usePathname();
+
   const [menuOpen, setMenuOpen] = useState(false);
-  const [quickLinksOpen, setQuickLinksOpen] = useState(false);
+  const [quickLinksOpen, setQuickLinksOpen] =
+    useState(false);
 
   const contextualNavigation = getNavigation(pathname);
 
@@ -242,7 +357,10 @@ export default function SiteHeader() {
           aria-label="Primary navigation"
         >
           {navigationItems.map((item) => {
-            const isActive = isActivePath(pathname, item.href);
+            const isActive = isActivePath(
+              pathname,
+              item.href,
+            );
 
             return (
               <Link
@@ -267,7 +385,9 @@ export default function SiteHeader() {
           <div className="relative">
             <button
               type="button"
-              onClick={() => setQuickLinksOpen((open) => !open)}
+              onClick={() =>
+                setQuickLinksOpen((open) => !open)
+              }
               className="flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-white/90 transition hover:text-white"
               aria-expanded={quickLinksOpen}
               aria-haspopup="menu"
@@ -276,7 +396,9 @@ export default function SiteHeader() {
 
               <span
                 className={`text-xs transition-transform ${
-                  quickLinksOpen ? "rotate-180" : ""
+                  quickLinksOpen
+                    ? "rotate-180"
+                    : ""
                 }`}
               >
                 ▾
@@ -292,9 +414,14 @@ export default function SiteHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setQuickLinksOpen(false)}
+                    onClick={() =>
+                      setQuickLinksOpen(false)
+                    }
                     className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                      isActivePath(pathname, item.href)
+                      isActivePath(
+                        pathname,
+                        item.href,
+                      )
                         ? "bg-[#BFF2F8] text-[#168DB8]"
                         : "text-[#0B2633] hover:bg-[#F4FAFC] hover:text-[#168DB8]"
                     }`}
@@ -321,10 +448,14 @@ export default function SiteHeader() {
         {/* Mobile Menu Button */}
         <button
           type="button"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() =>
+            setMenuOpen((open) => !open)
+          }
           className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15 xl:hidden"
           aria-label={
-            menuOpen ? "Close navigation menu" : "Open navigation menu"
+            menuOpen
+              ? "Close navigation menu"
+              : "Open navigation menu"
           }
           aria-expanded={menuOpen}
         >
@@ -336,49 +467,71 @@ export default function SiteHeader() {
 
       {/* Mobile Navigation */}
       {menuOpen && (
-        <div className="border-t border-white/15 bg-[#168DB8] xl:hidden">
+        <div className="border-t border-white/15 bg-[#2BB9EC] xl:hidden">
           <nav
-            className="mx-auto grid max-w-7xl gap-1 px-5 py-4 lg:px-8"
+            className="mx-auto max-w-7xl px-5 py-4 lg:px-8"
             aria-label="Mobile navigation"
           >
-            {navigationItems.map((item) => {
-              const isActive = isActivePath(pathname, item.href);
+            <div className="space-y-1">
+              {navigationItems.map((item) => {
+                const isActive = isActivePath(
+                  pathname,
+                  item.href,
+                );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    isActive
-                      ? "bg-white text-[#0B2633]"
-                      : "text-white hover:bg-white/10"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() =>
+                      setMenuOpen(false)
+                    }
+                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-white text-[#0B2633]"
+                        : "text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
 
-            <div className="my-2 border-t border-white/15" />
+            <div className="mt-4 border-t border-white/15 pt-4">
+              <p className="px-4 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/60">
+                Quick Links
+              </p>
 
-            {quickLinks.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className="rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                {item.label}
-              </Link>
-            ))}
+              <div className="space-y-1">
+                {quickLinks.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() =>
+                      setMenuOpen(false)
+                    }
+                    className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                      isActivePath(
+                        pathname,
+                        item.href,
+                      )
+                        ? "bg-white text-[#168DB8]"
+                        : "text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
 
             <Link
               href="/login"
               onClick={() => setMenuOpen(false)}
-              className="mt-2 rounded-xl bg-[#F700BA] px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-[#CE26A4]"
+              className="mt-4 block rounded-full bg-[#F700BA] px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-[#CE26A4]"
             >
-              Member Login
+              Login
             </Link>
           </nav>
         </div>
