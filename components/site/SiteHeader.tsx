@@ -17,47 +17,62 @@ const navItems = [
 
 export default function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-black/10 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-4 lg:px-8">
-        <Link href="/" className="shrink-0 text-2xl font-black tracking-tight text-[#168DB8]">
-          KUHRSA
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-3"
+          aria-label="KUHRSA home"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#168DB8] text-sm font-black tracking-tight text-white shadow-sm">
+            K
+          </span>
+
+          <span>
+            <span className="block text-xl font-black tracking-tight text-[#168DB8]">
+              KUHRSA
+            </span>
+            <span className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-black/45 sm:block">
+              Student Association
+            </span>
+          </span>
         </Link>
 
-        <nav className="hidden flex-1 justify-center gap-5 xl:flex" aria-label="Primary navigation">
+        <nav
+          className="hidden flex-1 items-center justify-center gap-5 xl:flex"
+          aria-label="Primary navigation"
+        >
           {navItems.map(([label, href]) => (
             <Link
               key={href}
               href={href}
-              className="text-sm font-semibold text-black transition hover:text-[#168DB8]"
+              className="text-sm font-semibold text-black/75 transition hover:text-[#168DB8]"
             >
               {label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Link
             href="/login"
-            className="hidden rounded-full border-2 border-[#168DB8] px-4 py-2 text-sm font-bold text-[#168DB8] md:inline-flex"
+            className="rounded-full border-2 border-[#168DB8] px-4 py-2 text-sm font-bold text-[#168DB8] transition hover:bg-[#168DB8] hover:text-white"
           >
             Login
-          </Link>
-          <Link
-            href="/membership#join"
-            className="rounded-full bg-[#F700BA] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
-          >
-            Join KUHRSA
           </Link>
         </div>
       </div>
 
-      <div className="overflow-x-auto border-t border-black/5 xl:hidden">
-        <nav className="mx-auto flex min-w-max gap-5 px-5 py-3" aria-label="Mobile navigation">
+      <div className="border-t border-black/5 xl:hidden">
+        <nav
+          className="mx-auto flex max-w-7xl gap-5 overflow-x-auto px-5 py-3 lg:px-8"
+          aria-label="Mobile navigation"
+        >
           {navItems.map(([label, href]) => (
             <Link
               key={href}
               href={href}
-              className="text-sm font-semibold text-black"
+              className="shrink-0 text-sm font-semibold text-black/70 transition hover:text-[#168DB8]"
             >
               {label}
             </Link>
