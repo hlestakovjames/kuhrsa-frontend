@@ -7,22 +7,29 @@ const exploreLinks = [
   ["News", "/news"],
   ["Blog", "/blog"],
   ["Events", "/events"],
-  ["Activities", "/activities"],
+  ["Contact", "/contact"],
 ];
 
-const discoverLinks = [
+const quickLinks = [
   ["Announcements", "/announcements"],
+  ["Activities", "/activities"],
   ["Academic", "/academic"],
   ["Resources", "/resources"],
   ["Departments", "/departments"],
   ["Gallery", "/gallery"],
 ];
 
+const portalLinks = [
+  ["Member Login", "/login"],
+  ["Register", "/register"],
+];
+
 export default function SiteFooter() {
   return (
     <footer className="bg-[#0B2633] text-white">
       <div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
-        <div className="lg:col-span-1">
+        {/* Brand */}
+        <div>
           <Link
             href="/"
             className="inline-flex items-center"
@@ -45,6 +52,7 @@ export default function SiteFooter() {
           </p>
         </div>
 
+        {/* Explore */}
         <div>
           <h3 className="text-sm font-black uppercase tracking-[0.14em] text-white/90">
             Explore
@@ -63,13 +71,14 @@ export default function SiteFooter() {
           </div>
         </div>
 
+        {/* Quick Links */}
         <div>
           <h3 className="text-sm font-black uppercase tracking-[0.14em] text-white/90">
-            Discover
+            Quick Links
           </h3>
 
           <div className="mt-5 grid gap-3 text-sm text-white/65">
-            {discoverLinks.map(([label, href]) => (
+            {quickLinks.map(([label, href]) => (
               <Link
                 key={href}
                 href={href}
@@ -81,41 +90,95 @@ export default function SiteFooter() {
           </div>
         </div>
 
+        {/* Online Portal */}
         <div>
           <h3 className="text-sm font-black uppercase tracking-[0.14em] text-white/90">
-            Connect
+            Online Portal
           </h3>
 
-          <div className="mt-5 grid gap-3 text-sm text-white/65">
-            <Link
-              href="/contact"
-              className="transition hover:text-white"
-            >
-              Contact KUHRSA
-            </Link>
+          <p className="mt-4 max-w-xs text-sm leading-6 text-white/55">
+            Access KUHRSA membership services and authorized online portals.
+          </p>
 
-            <Link
-              href="/membership"
-              className="transition hover:text-white"
-            >
-              Membership
-            </Link>
+          <div className="mt-5 grid gap-3 text-sm">
+            {portalLinks.map(([label, href]) => (
+              <Link
+                key={href}
+                href={href}
+                className="font-semibold text-white/75 transition hover:text-white"
+              >
+                {label}
+              </Link>
+            ))}
 
-            <Link
-              href="/login"
-              className="transition hover:text-white"
-            >
-              Member Login
-            </Link>
+            {/* Authorized portals */}
+            <div className="mt-2 border-t border-white/10 pt-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
+                Authorized Access
+              </p>
+
+              <div className="mt-3 grid gap-3">
+                <Link
+                  href="/leadership"
+                  className="text-white/60 transition hover:text-white"
+                >
+                  Leadership Portal
+                </Link>
+
+                <Link
+                  href="/administration"
+                  className="text-white/60 transition hover:text-white"
+                >
+                  Administration
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Contact strip */}
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-6 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+          <div>
+            <p className="text-sm font-bold text-white/85">
+              Need to reach KUHRSA?
+            </p>
+
+            <Link
+              href="/contact"
+              className="mt-1 inline-block text-sm text-white/55 transition hover:text-white"
+            >
+              Contact the association →
+            </Link>
+          </div>
+
+          <div className="text-sm text-white/45">
+            KUHRSA Public Website
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom bar */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-5 text-sm text-white/45 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <p>© {new Date().getFullYear()} KUHRSA. All rights reserved.</p>
 
-          <p>KUHRSA Public Website</p>
+          <div className="flex gap-5">
+            <Link
+              href="/privacy"
+              className="transition hover:text-white"
+            >
+              Privacy
+            </Link>
+
+            <Link
+              href="/terms"
+              className="transition hover:text-white"
+            >
+              Terms
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
