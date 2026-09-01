@@ -156,11 +156,23 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Latest Notices",
-        href: "/announcements#latest",
+        href: "/announcements/latest",
       },
       {
         label: "Important Updates",
-        href: "/announcements#important",
+        href: "/announcements/important",
+      },
+      {
+        label: "Categories",
+        href: "/announcements/categories",
+      },
+      {
+        label: "Archive",
+        href: "/announcements/archive",
+      },
+      {
+        label: "Search Announcements",
+        href: "/announcements/search",
       },
     ],
   },
