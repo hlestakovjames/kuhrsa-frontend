@@ -168,7 +168,10 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/events": {
     label: "Events",
     items: [
-      { label: "Events Home", href: "/events" },
+      {
+        label: "Events Home",
+        href: "/events",
+      },
       {
         label: "Upcoming Events",
         href: "/events#upcoming",
@@ -209,7 +212,10 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/academic": {
     label: "Academic",
     items: [
-      { label: "Academic Home", href: "/academic" },
+      {
+        label: "Academic Home",
+        href: "/academic",
+      },
       {
         label: "Academic Updates",
         href: "/academic#updates",
@@ -268,7 +274,10 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/gallery": {
     label: "Gallery",
     items: [
-      { label: "Gallery Home", href: "/gallery" },
+      {
+        label: "Gallery Home",
+        href: "/gallery",
+      },
       {
         label: "Events",
         href: "/gallery#events",
@@ -410,7 +419,9 @@ export default function SiteHeader() {
                           ? "noopener noreferrer"
                           : undefined
                       }
-                      onClick={() => setQuickLinksOpen(false)}
+                      onClick={() =>
+                        setQuickLinksOpen(false)
+                      }
                       className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-[#0B2633] transition hover:bg-[#F4FAFC] hover:text-[#168DB8]"
                       role="menuitem"
                     >
@@ -594,16 +605,6 @@ export default function SiteHeader() {
 
                         <Link
                           href={item.href}
-                          target={
-                            item.href === "/login"
-                              ? "_blank"
-                              : undefined
-                          }
-                          rel={
-                            item.href === "/login"
-                              ? "noopener noreferrer"
-                              : undefined
-                          }
                           onClick={handleMobileClose}
                           className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
                         >
@@ -718,8 +719,6 @@ export default function SiteHeader() {
               {/* Mobile Join Us */}
               <Link
                 href="/register"
-                target="_blank"
-                rel="noopener noreferrer"
                 onClick={handleMobileClose}
                 className="mt-5 block rounded-full bg-[#0B2633] px-5 py-3 text-center text-sm font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8]"
               >
