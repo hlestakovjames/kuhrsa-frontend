@@ -24,6 +24,7 @@ const mainNavigation: NavItem[] = [
   { label: "Events", href: "/events" },
   { label: "Activities", href: "/activities" },
   { label: "Academic", href: "/academic" },
+  { label: "Resources", href: "/resources" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -32,7 +33,6 @@ const quickLinks: NavItem[] = [
   { label: "Leadership Portal", href: "/leadership" },
   { label: "Administration", href: "/administration" },
   { label: "Announcements", href: "/announcements" },
-  { label: "Resources", href: "/resources" },
   { label: "Departments", href: "/departments" },
   { label: "Gallery", href: "/gallery" },
   { label: "Downloads", href: "/resources/downloads" },
@@ -276,15 +276,27 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Academic Resources",
-        href: "/resources#academic",
+        href: "/resources/academic",
       },
       {
         label: "Member Resources",
-        href: "/resources#members",
+        href: "/resources/members",
+      },
+      {
+        label: "Guides & Documents",
+        href: "/resources/guides",
       },
       {
         label: "Downloads",
         href: "/resources/downloads",
+      },
+      {
+        label: "Categories",
+        href: "/resources/categories",
+      },
+      {
+        label: "Search Resources",
+        href: "/resources/search",
       },
     ],
   },
