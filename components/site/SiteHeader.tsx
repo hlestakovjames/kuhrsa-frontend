@@ -310,11 +310,15 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Department Directory",
-        href: "/departments#directory",
+        href: "/departments/directory",
       },
       {
         label: "Department Contacts",
-        href: "/departments#contacts",
+        href: "/departments/contacts",
+      },
+      {
+        label: "Functions & Responsibilities",
+        href: "/departments/functions",
       },
     ],
   },
