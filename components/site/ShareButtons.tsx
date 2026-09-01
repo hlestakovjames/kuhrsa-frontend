@@ -15,16 +15,58 @@ export default function ShareButtons({
 }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
 
-  const encodedTitle = encodeURIComponent(title);
-  const encodedUrl = encodeURIComponent(url);
+  const getAbsoluteUrl = () => {
+    return new URL(url, window.location.origin).toString();
+  };
 
-  const whatsappUrl = `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`;
-  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-  const xUrl = `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`;
+  const shareToWhatsApp = () => {
+    const absoluteUrl = getAbsoluteUrl();
+
+    const shareUrl = `https://wa.me/?text=${encodeURIComponent(
+      `${title}\n${absoluteUrl}`,
+    )}`;
+
+    window.open(
+      shareUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const shareToFacebook = () => {
+    const absoluteUrl = getAbsoluteUrl();
+
+    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+      absoluteUrl,
+    )}`;
+
+    window.open(
+      shareUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const shareToX = () => {
+    const absoluteUrl = getAbsoluteUrl();
+
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      title,
+    )}&url=${encodeURIComponent(absoluteUrl)}`;
+
+    window.open(
+      shareUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      const absoluteUrl = getAbsoluteUrl();
+
+      await navigator.clipboard.writeText(absoluteUrl);
+
       setCopied(true);
 
       window.setTimeout(() => {
@@ -49,32 +91,29 @@ export default function ShareButtons({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={shareToWhatsApp}
             className="rounded-full bg-[#168DB8] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#0B2633]"
           >
             WhatsApp
-          </a>
+          </button>
 
-          <a
-            href={facebookUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={shareToFacebook}
             className="rounded-full bg-[#BFF2F8] px-5 py-2.5 text-sm font-bold text-[#168DB8] transition hover:bg-[#A8EAF2]"
           >
             Facebook
-          </a>
+          </button>
 
-          <a
-            href={xUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={shareToX}
             className="rounded-full bg-[#0B2633] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#168DB8]"
           >
             X
-          </a>
+          </button>
 
           <button
             type="button"
