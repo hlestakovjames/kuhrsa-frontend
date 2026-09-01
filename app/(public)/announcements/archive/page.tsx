@@ -36,7 +36,7 @@ export default function AnnouncementArchivePage() {
       <section className="bg-white">
         <div className="mx-auto max-w-5xl px-5 py-16 lg:px-8 lg:py-20">
           <div className="space-y-4">
-            {archiveItems.map((item, index) => (
+            {archiveItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

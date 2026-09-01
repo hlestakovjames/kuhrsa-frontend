@@ -139,11 +139,46 @@ const siteNavigations: Record<string, SiteNavigation> = {
   "/blog": {
     label: "Blog",
     items: [
-      { label: "Blog Home", href: "/blog" },
-      { label: "Latest Stories", href: "/blog#latest" },
-      { label: "Featured", href: "/blog#featured" },
-      { label: "Topics", href: "/blog#topics" },
-      { label: "Categories", href: "/blog#categories" },
+      {
+        label: "Blog Home",
+        href: "/blog",
+      },
+      {
+        label: "Latest Stories",
+        href: "/blog/latest",
+      },
+      {
+        label: "Featured Stories",
+        href: "/blog/featured",
+      },
+      {
+        label: "Editor's Picks",
+        href: "/blog/editors-picks",
+      },
+      {
+        label: "Topics",
+        href: "/blog/topics",
+      },
+      {
+        label: "Categories",
+        href: "/blog/categories",
+      },
+      {
+        label: "Contributors",
+        href: "/blog/contributors",
+      },
+      {
+        label: "Series",
+        href: "/blog/series",
+      },
+      {
+        label: "Archive",
+        href: "/blog/archive",
+      },
+      {
+        label: "Search",
+        href: "/blog/search",
+      },
     ],
   },
 
