@@ -388,21 +388,28 @@ const siteNavigations: Record<string, SiteNavigation> = {
     label: "Contact",
     items: [
       {
-        label: "Contact KUHRSA",
+        label: "Contact Home",
         href: "/contact",
       },
       {
         label: "Get in Touch",
-        href: "/contact#contact",
+        href: "/contact#general",
+      },
+      {
+        label: "Contact Directory",
+        href: "/contact#membership",
       },
       {
         label: "Location",
         href: "/contact#location",
       },
+      {
+        label: "Enquiry Form",
+        href: "/contact#form",
+      },
     ],
   },
-};
-
+}
 function getNavigation(pathname: string): SiteNavigation | null {
   const matchingPath = Object.keys(siteNavigations)
     .sort((a, b) => b.length - a.length)
