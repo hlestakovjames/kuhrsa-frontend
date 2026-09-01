@@ -332,15 +332,19 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Events",
-        href: "/gallery#events",
+        href: "/gallery/events",
       },
       {
         label: "Activities",
-        href: "/gallery#activities",
+        href: "/gallery/activities",
       },
       {
         label: "KUHRSA Community",
-        href: "/gallery#community",
+        href: "/gallery/community",
+      },
+      {
+        label: "Categories",
+        href: "/gallery/categories",
       },
     ],
   },
