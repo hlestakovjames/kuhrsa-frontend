@@ -174,15 +174,23 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Upcoming Events",
-        href: "/events#upcoming",
+        href: "/events/upcoming",
       },
       {
-        label: "Past Events",
-        href: "/events#past",
+        label: "Featured Events",
+        href: "/events/featured",
       },
       {
         label: "Event Calendar",
-        href: "/events#calendar",
+        href: "/events/calendar",
+      },
+      {
+        label: "Past Events",
+        href: "/events/past",
+      },
+      {
+        label: "Event Categories",
+        href: "/events/categories",
       },
     ],
   },
