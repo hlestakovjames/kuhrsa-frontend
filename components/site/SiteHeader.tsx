@@ -234,15 +234,23 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Academic Updates",
-        href: "/academic#updates",
+        href: "/academic/updates",
       },
       {
         label: "Opportunities",
-        href: "/academic#opportunities",
+        href: "/academic/opportunities",
       },
       {
         label: "Academic Resources",
-        href: "/academic#resources",
+        href: "/academic/resources",
+      },
+      {
+        label: "Academic Calendar",
+        href: "/academic/calendar",
+      },
+      {
+        label: "Academic Categories",
+        href: "/academic/categories",
       },
     ],
   },
