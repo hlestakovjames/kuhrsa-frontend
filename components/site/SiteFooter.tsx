@@ -155,10 +155,10 @@ export default function SiteFooter() {
 
               <div className="mt-3 grid gap-3">
                 <Link
-                  href="/leadership"
+                  href="/executive"
                   className="text-white/60 transition hover:text-white"
                 >
-                  Leadership Portal
+                  Executive Portal
                 </Link>
 
                 <Link

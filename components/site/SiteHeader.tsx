@@ -30,7 +30,7 @@ const mainNavigation: NavItem[] = [
 
 const quickLinks: NavItem[] = [
   { label: "Member Portal", href: "/login" },
-  { label: "Leadership Portal", href: "/leadership" },
+  { label: "Executive Portal", href: "/executive" },
   { label: "Administration", href: "/administration" },
   { label: "Announcements", href: "/announcements" },
   { label: "Departments", href: "/departments" },
@@ -409,7 +409,8 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
     ],
   },
-}
+};
+
 function getNavigation(pathname: string): SiteNavigation | null {
   const matchingPath = Object.keys(siteNavigations)
     .sort((a, b) => b.length - a.length)
@@ -419,7 +420,9 @@ function getNavigation(pathname: string): SiteNavigation | null {
         pathname.startsWith(`${basePath}/`),
     );
 
-  return matchingPath ? siteNavigations[matchingPath] : null;
+  return matchingPath
+    ? siteNavigations[matchingPath]
+    : null;
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -440,7 +443,8 @@ export default function SiteHeader() {
   const pathname = usePathname();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [quickLinksOpen, setQuickLinksOpen] = useState(false);
+  const [quickLinksOpen, setQuickLinksOpen] =
+    useState(false);
   const [mobileQuickLinksOpen, setMobileQuickLinksOpen] =
     useState(false);
 
@@ -573,9 +577,10 @@ export default function SiteHeader() {
                 item.href,
               );
 
-              const shouldWrap = shouldWrapNavigationLabel(
-                item.label,
-              );
+              const shouldWrap =
+                shouldWrapNavigationLabel(
+                  item.label,
+                );
 
               return (
                 <Link
@@ -636,7 +641,9 @@ export default function SiteHeader() {
 
           <button
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={() =>
+              setMenuOpen((open) => !open)
+            }
             className="flex h-11 w-11 items-center justify-center rounded-full border border-white/50 text-white transition hover:bg-white/15"
             aria-label={
               menuOpen
@@ -667,7 +674,9 @@ export default function SiteHeader() {
                     )
                   }
                   className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
-                  aria-expanded={mobileQuickLinksOpen}
+                  aria-expanded={
+                    mobileQuickLinksOpen
+                  }
                 >
                   <span>Quick Links</span>
 
