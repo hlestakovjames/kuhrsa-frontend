@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
+import ShareButtons from "@/components/site/ShareButtons";
 
 const articles = [
   {
@@ -31,7 +32,7 @@ const articles = [
       {
         heading: "Looking ahead",
         paragraphs: [
-          "As KUHRSA continues to grow, its focus remains on creating meaningful experiences for Human Resource students while strengthening the association's community and professional identity.",
+          "As KUHRSA continues to grow, its focus remains on creating meaningful experiences for Human Resource students while strengthening the association&apos;s community and professional identity.",
         ],
       },
     ],
@@ -107,7 +108,7 @@ const articles = [
       {
         heading: "The value of connection",
         paragraphs: [
-          "Professional relationships can broaden a student's understanding of the HR profession and provide access to new perspectives and experiences.",
+          "Professional relationships can broaden a student&apos;s understanding of the HR profession and provide access to new perspectives and experiences.",
           "KUHRSA encourages members to build connections with peers, leaders, alumni and professionals wherever opportunities arise.",
         ],
       },
@@ -214,6 +215,8 @@ export default async function NewsArticlePage({
     )
     .slice(0, 2);
 
+  const articleUrl = `/news/${article.slug}`;
+
   return (
     <>
       <PageHero
@@ -269,6 +272,12 @@ export default async function NewsArticlePage({
               </section>
             ))}
           </div>
+
+          <ShareButtons
+            title={article.title}
+            url={articleUrl}
+            label="Share this story"
+          />
         </div>
       </article>
 
