@@ -204,15 +204,23 @@ const siteNavigations: Record<string, SiteNavigation> = {
       },
       {
         label: "Current Activities",
-        href: "/activities#current",
+        href: "/activities/current",
+      },
+      {
+        label: "Featured Activities",
+        href: "/activities/featured",
+      },
+      {
+        label: "Activity Calendar",
+        href: "/activities/calendar",
       },
       {
         label: "Past Activities",
-        href: "/activities#past",
+        href: "/activities/past",
       },
       {
-        label: "Opportunities",
-        href: "/activities#opportunities",
+        label: "Activity Categories",
+        href: "/activities/categories",
       },
     ],
   },
