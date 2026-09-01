@@ -40,6 +40,7 @@ const articles = [
       },
     ],
   },
+
   {
     slug: "opportunities-beyond-classroom",
     title: "Creating opportunities beyond the classroom",
@@ -72,6 +73,7 @@ const articles = [
       },
     ],
   },
+
   {
     slug: "student-leadership-future",
     title: "Student leadership and the future of KUHRSA",
@@ -98,6 +100,7 @@ const articles = [
       },
     ],
   },
+
   {
     slug: "professional-connections",
     title: "Building stronger professional connections",
@@ -123,6 +126,7 @@ const articles = [
       },
     ],
   },
+
   {
     slug: "kuhrsa-activities-opportunities",
     title: "KUHRSA activities creating new opportunities",
@@ -148,6 +152,7 @@ const articles = [
       },
     ],
   },
+
   {
     slug: "mentorship-growth",
     title: "Growing together through mentorship",

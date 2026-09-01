@@ -9,10 +9,13 @@ type ShareMetadataOptions = {
 };
 
 function getSiteUrl() {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "http://localhost:3000"
-  );
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (siteUrl) {
+    return siteUrl.replace(/\/+$/, "");
+  }
+
+  return "http://localhost:3000";
 }
 
 export function createShareMetadata({
@@ -24,14 +27,13 @@ export function createShareMetadata({
 }: ShareMetadataOptions): Metadata {
   const siteUrl = getSiteUrl();
 
-  const pageUrl = new URL(path, siteUrl).toString();
-  const imageUrl = new URL(image, siteUrl).toString();
+  const pageUrl = new URL(path, `${siteUrl}/`).toString();
+  const imageUrl = new URL(image, `${siteUrl}/`).toString();
 
   return {
     title,
     description,
-
-    metadataBase: new URL(siteUrl),
+    metadataBase: new URL(`${siteUrl}/`),
 
     openGraph: {
       title,

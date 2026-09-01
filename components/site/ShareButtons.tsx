@@ -36,9 +36,9 @@ export default function ShareButtons({
   const shareToFacebook = () => {
     const absoluteUrl = getAbsoluteUrl();
 
-    const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-      absoluteUrl,
-    )}`;
+    const shareUrl =
+      `https://www.facebook.com/sharer/sharer.php?u=` +
+      encodeURIComponent(absoluteUrl);
 
     window.open(
       shareUrl,
@@ -50,9 +50,11 @@ export default function ShareButtons({
   const shareToX = () => {
     const absoluteUrl = getAbsoluteUrl();
 
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-      title,
-    )}&url=${encodeURIComponent(absoluteUrl)}`;
+    const shareUrl =
+      `https://twitter.com/intent/tweet?text=` +
+      encodeURIComponent(title) +
+      `&url=` +
+      encodeURIComponent(absoluteUrl);
 
     window.open(
       shareUrl,
