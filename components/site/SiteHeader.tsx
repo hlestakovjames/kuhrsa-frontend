@@ -401,8 +401,6 @@ export default function SiteHeader() {
   const [quickLinksOpen, setQuickLinksOpen] = useState(false);
   const [mobileQuickLinksOpen, setMobileQuickLinksOpen] =
     useState(false);
-  const [mobileOpenSection, setMobileOpenSection] =
-    useState<string | null>(null);
 
   const contextualNavigation = getNavigation(pathname);
 
@@ -412,14 +410,7 @@ export default function SiteHeader() {
 
   const handleMobileClose = () => {
     setMenuOpen(false);
-    setMobileOpenSection(null);
     setMobileQuickLinksOpen(false);
-  };
-
-  const toggleMobileSection = (label: string) => {
-    setMobileOpenSection((current) =>
-      current === label ? null : label,
-    );
   };
 
   return (
@@ -672,102 +663,27 @@ export default function SiteHeader() {
                 )}
               </div>
 
-              {/* Mobile Main Navigation */}
+              {/* Contextual Mobile Navigation */}
               <div className="mt-2 space-y-1">
-                {mainNavigation.map((item) => {
+                {navigationItems.map((item) => {
                   const isActive = isActivePath(
                     pathname,
                     item.href,
                   );
 
-                  const contextual =
-                    siteNavigations[item.href];
-
-                  const isSectionOpen =
-                    mobileOpenSection === item.label;
-
                   return (
-                    <div key={item.href}>
-                      {contextual ? (
-                        <>
-                          <div className="flex items-center rounded-xl transition hover:bg-white/10">
-                            <Link
-                              href={item.href}
-                              onClick={handleMobileClose}
-                              className={`min-w-0 flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                                isActive
-                                  ? "text-[#0B2633]"
-                                  : "text-white"
-                              }`}
-                            >
-                              {item.label}
-                            </Link>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleMobileSection(
-                                  item.label,
-                                )
-                              }
-                              className="px-4 py-3 text-white"
-                              aria-label={`Show ${item.label} submenu`}
-                              aria-expanded={
-                                isSectionOpen
-                              }
-                            >
-                              <span
-                                className={`inline-block text-xs transition-transform ${
-                                  isSectionOpen
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              >
-                                ▾
-                              </span>
-                            </button>
-                          </div>
-
-                          {isSectionOpen && (
-                            <div className="ml-3 border-l border-white/20 pl-2">
-                              {contextual.items.map(
-                                (subItem) => (
-                                  <Link
-                                    key={subItem.href}
-                                    href={subItem.href}
-                                    onClick={
-                                      handleMobileClose
-                                    }
-                                    className={`block rounded-xl px-4 py-2.5 text-sm font-medium leading-5 transition ${
-                                      isActivePath(
-                                        pathname,
-                                        subItem.href,
-                                      )
-                                        ? "bg-white text-[#0B2633]"
-                                        : "text-white/90 hover:bg-white/10 hover:text-white"
-                                    }`}
-                                  >
-                                    {subItem.label}
-                                  </Link>
-                                ),
-                              )}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <Link
-                          href={item.href}
-                          onClick={handleMobileClose}
-                          className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                            isActive
-                              ? "bg-white text-[#0B2633]"
-                              : "text-white hover:bg-white/10"
-                          }`}
-                        >
-                          {item.label}
-                        </Link>
-                      )}
-                    </div>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={handleMobileClose}
+                      className={`block rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-white text-[#0B2633]"
+                          : "text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
                   );
                 })}
               </div>
