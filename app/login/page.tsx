@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { login } from "@/lib/auth";
 
 type AccessMode = "login" | "activate";
 type ActivationStep = 1 | 2 | 3 | 4 | 5;
@@ -20,8 +22,22 @@ const activationSteps = [
 ] as const;
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [mode, setMode] =
     useState<AccessMode>("login");
+
+  const [loginIdentifier, setLoginIdentifier] =
+    useState("");
+
+  const [loginPassword, setLoginPassword] =
+    useState("");
+
+  const [loginError, setLoginError] =
+    useState("");
+
+  const [loginLoading, setLoginLoading] =
+    useState(false);
 
   const [activationStep, setActivationStep] =
     useState<ActivationStep>(1);
@@ -32,18 +48,17 @@ export default function LoginPage() {
   /*
    * Frontend-only placeholder for the future backend result.
    *
-   * The backend will eventually determine:
+   * The membership activation backend will eventually determine:
    * - whether the member exists
    * - whether the record is migrated
    * - whether the account is already activated
    * - whether membership is already paid
    * - the exact amount due
-   *
-   * For now, "DUE" allows the full payment path
-   * to be tested. Backend integration will replace
-   * this value dynamically.
    */
-  const [membershipPaymentStatus, setMembershipPaymentStatus] =
+  const [
+    membershipPaymentStatus,
+    setMembershipPaymentStatus,
+  ] =
     useState<MembershipPaymentStatus>("DUE");
 
   const [activation, setActivation] = useState({
@@ -83,7 +98,68 @@ export default function LoginPage() {
   const changeMode = (nextMode: AccessMode) => {
     setMode(nextMode);
     setActivationError("");
+    setLoginError("");
     setActivationStep(1);
+  };
+
+  const handleMemberLogin = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    setLoginError("");
+
+    if (
+      !loginIdentifier.trim() ||
+      !loginPassword
+    ) {
+      setLoginError(
+        "Enter your email or registration number and password.",
+      );
+      return;
+    }
+
+    setLoginLoading(true);
+
+    try {
+      const result = await login(
+        loginIdentifier,
+        loginPassword,
+      );
+
+      /*
+       * The backend has already authenticated the account
+       * and returned its current roles/access information.
+       *
+       * The ordinary member entry point goes to the Member Dashboard.
+       * Executive and Administration access can still be reached
+       * from their dedicated portal entry pages.
+       */
+      if (
+        !result.user.isSystemOwner &&
+        !result.user.roles.some(
+          (role) =>
+            role.code === "MEMBER" ||
+            role.code === "EXECUTIVE" ||
+            role.code === "ADMINISTRATOR" ||
+            role.code === "SUPER_ADMINISTRATOR",
+        )
+      ) {
+        throw new Error(
+          "Your account does not have active KUHRSA portal access.",
+        );
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      setLoginError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in.",
+      );
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   const validateActivationStep = (
@@ -164,25 +240,24 @@ export default function LoginPage() {
 
     setActivationError("");
 
-    /*
-     * If membership is already paid, skip the payment
-     * step and complete activation.
-     */
     if (
       activationStep === 3 &&
       membershipPaymentStatus === "PAID"
     ) {
       setActivationStep(5);
+
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
+
       return;
     }
 
     if (activationStep < 5) {
       setActivationStep(
-        (current) => (current + 1) as ActivationStep,
+        (current) =>
+          (current + 1) as ActivationStep,
       );
 
       window.scrollTo({
@@ -197,7 +272,8 @@ export default function LoginPage() {
 
     if (activationStep > 1) {
       setActivationStep(
-        (current) => (current - 1) as ActivationStep,
+        (current) =>
+          (current - 1) as ActivationStep,
       );
 
       window.scrollTo({
@@ -227,10 +303,16 @@ export default function LoginPage() {
 
   const fullName = useMemo(
     () =>
-      [activation.firstName, activation.lastName]
+      [
+        activation.firstName,
+        activation.lastName,
+      ]
         .filter(Boolean)
         .join(" "),
-    [activation.firstName, activation.lastName],
+    [
+      activation.firstName,
+      activation.lastName,
+    ],
   );
 
   const paymentRequired =
@@ -373,7 +455,9 @@ export default function LoginPage() {
               <div className="mt-8 grid grid-cols-2 rounded-full bg-[#F4FAFC] p-1">
                 <button
                   type="button"
-                  onClick={() => changeMode("login")}
+                  onClick={() =>
+                    changeMode("login")
+                  }
                   className={`rounded-full px-4 py-3 text-sm font-bold transition ${
                     mode === "login"
                       ? "bg-[#168DB8] text-white shadow-sm"
@@ -403,9 +487,7 @@ export default function LoginPage() {
                 <>
                   <form
                     className="mt-8 grid gap-5"
-                    onSubmit={(event) =>
-                      event.preventDefault()
-                    }
+                    onSubmit={handleMemberLogin}
                   >
                     <div>
                       <label
@@ -421,6 +503,13 @@ export default function LoginPage() {
                         type="text"
                         autoComplete="username"
                         placeholder="Email or registration number"
+                        value={loginIdentifier}
+                        onChange={(event) =>
+                          setLoginIdentifier(
+                            event.target.value,
+                          )
+                        }
+                        disabled={loginLoading}
                         className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
                       />
                     </div>
@@ -439,15 +528,35 @@ export default function LoginPage() {
                         type="password"
                         autoComplete="current-password"
                         placeholder="Enter your password"
+                        value={loginPassword}
+                        onChange={(event) =>
+                          setLoginPassword(
+                            event.target.value,
+                          )
+                        }
+                        disabled={loginLoading}
                         className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
                       />
                     </div>
 
+                    {loginError && (
+                      <div className="rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700 ring-1 ring-red-100">
+                        {loginError}
+                      </div>
+                    )}
+
                     <button
                       type="submit"
-                      className="mt-1 rounded-full bg-[#168DB8] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D]"
+                      disabled={loginLoading}
+                      className={`mt-1 rounded-full bg-[#168DB8] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D] ${
+                        loginLoading
+                          ? "cursor-not-allowed opacity-60"
+                          : ""
+                      }`}
                     >
-                      Sign In
+                      {loginLoading
+                        ? "Signing In..."
+                        : "Sign In"}
                     </button>
                   </form>
 
@@ -482,16 +591,19 @@ export default function LoginPage() {
                   {activationStep < 5 && (
                     <div className="mt-7">
                       <div className="flex items-center gap-2">
-                        {activationSteps.map((item) => (
-                          <div
-                            key={item.number}
-                            className={`h-1.5 flex-1 rounded-full ${
-                              item.number <= activationStep
-                                ? "bg-[#F700BA]"
-                                : "bg-black/10"
-                            }`}
-                          />
-                        ))}
+                        {activationSteps.map(
+                          (item) => (
+                            <div
+                              key={item.number}
+                              className={`h-1.5 flex-1 rounded-full ${
+                                item.number <=
+                                activationStep
+                                  ? "bg-[#F700BA]"
+                                  : "bg-black/10"
+                              }`}
+                            />
+                          ),
+                        )}
                       </div>
 
                       <div className="mt-3 flex items-center justify-between text-xs text-black/40">
@@ -500,9 +612,11 @@ export default function LoginPage() {
                         </span>
 
                         <span>
-                          {activationSteps[
-                            activationStep - 1
-                          ]?.label}
+                          {
+                            activationSteps[
+                              activationStep - 1
+                            ]?.label
+                          }
                         </span>
                       </div>
                     </div>
@@ -528,7 +642,9 @@ export default function LoginPage() {
                       <div className="mt-6 grid gap-5">
                         <Field
                           label="Registration or Membership Number"
-                          value={activation.identifier}
+                          value={
+                            activation.identifier
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "identifier",
@@ -541,7 +657,9 @@ export default function LoginPage() {
                         <Field
                           label="Email Address"
                           type="email"
-                          value={activation.email}
+                          value={
+                            activation.email
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "email",
@@ -554,7 +672,9 @@ export default function LoginPage() {
                         <Field
                           label="Phone Number"
                           type="tel"
-                          value={activation.phone}
+                          value={
+                            activation.phone
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "phone",
@@ -618,7 +738,9 @@ export default function LoginPage() {
                       <div className="mt-6 grid gap-5 sm:grid-cols-2">
                         <Field
                           label="First Name"
-                          value={activation.firstName}
+                          value={
+                            activation.firstName
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "firstName",
@@ -630,7 +752,9 @@ export default function LoginPage() {
 
                         <Field
                           label="Last Name"
-                          value={activation.lastName}
+                          value={
+                            activation.lastName
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "lastName",
@@ -685,7 +809,9 @@ export default function LoginPage() {
                         <Field
                           label="Email Address"
                           type="email"
-                          value={activation.email}
+                          value={
+                            activation.email
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "email",
@@ -698,7 +824,9 @@ export default function LoginPage() {
                         <Field
                           label="Create Password"
                           type="password"
-                          value={activation.password}
+                          value={
+                            activation.password
+                          }
                           onChange={(value) =>
                             updateActivation(
                               "password",
@@ -746,7 +874,6 @@ export default function LoginPage() {
                         </span>
                       </label>
 
-                      {/* Payment Status Preview */}
                       <div className="mt-7 rounded-2xl bg-[#F9F4FC] p-4">
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
                           Membership Status
@@ -762,247 +889,153 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 4 */}
-                  {activationStep === 4 &&
-                    paymentRequired && (
-                      <div className="mt-8">
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
-                          Step 4
-                        </p>
+                  {activationStep === 4 && (
+                    <div className="mt-8">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
+                        Step 4
+                      </p>
 
-                        <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
-                          Complete membership payment.
-                        </h2>
+                      <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
+                        Complete payment.
+                      </h2>
 
-                        <p className="mt-3 text-sm leading-6 text-black/55">
-                          Your migrated membership requires payment before
-                          activation can be completed.
-                        </p>
-
-                        <div className="mt-6 grid gap-4">
-                          <PaymentOption
-                            title="M-Pesa"
-                            description="Pay using your mobile number."
-                            selected={
-                              activation.paymentMethod ===
-                              "M-Pesa"
-                            }
-                            onClick={() =>
-                              updateActivation(
-                                "paymentMethod",
-                                "M-Pesa",
-                              )
-                            }
-                          />
-
-                          <PaymentOption
-                            title="Other Method"
-                            description="Additional payment methods can be connected later."
-                            selected={
-                              activation.paymentMethod ===
-                              "Other"
-                            }
-                            pink
-                            onClick={() =>
-                              updateActivation(
-                                "paymentMethod",
-                                "Other",
-                              )
-                            }
-                          />
-                        </div>
-
-                        {activation.paymentMethod ===
-                          "M-Pesa" && (
-                          <div className="mt-6">
-                            <Field
-                              label="M-Pesa Number"
-                              type="tel"
-                              value={
-                                activation.mpesaNumber
-                              }
-                              onChange={(value) =>
-                                updateActivation(
-                                  "mpesaNumber",
-                                  value,
-                                )
-                              }
-                              placeholder="07XX XXX XXX"
-                            />
-                          </div>
-                        )}
-
-                        <div className="mt-6 rounded-2xl bg-[#0B2633] p-5 text-white">
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-white/50">
-                            Payment Summary
+                      {paymentRequired ? (
+                        <>
+                          <p className="mt-3 text-sm leading-6 text-black/55">
+                            Complete the required membership payment before
+                            your activation can be completed.
                           </p>
 
-                          <div className="mt-4 space-y-3">
-                            <PaymentRow
-                              label="Registration Fee"
-                              value="KSh 0"
-                            />
+                          <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
+                              Payment
+                            </p>
 
-                            <PaymentRow
-                              label="Membership Amount Due"
-                              value="KSh 200"
-                            />
+                            <div className="mt-4 grid gap-5">
+                              <Field
+                                label="Payment Method"
+                                value={
+                                  activation.paymentMethod
+                                }
+                                onChange={(value) =>
+                                  updateActivation(
+                                    "paymentMethod",
+                                    value,
+                                  )
+                                }
+                                placeholder="M-Pesa"
+                              />
 
-                            <div className="border-t border-white/15 pt-3">
-                              <PaymentRow
-                                label="Total"
-                                value="KSh 200"
-                                strong
+                              <Field
+                                label="M-Pesa Number"
+                                type="tel"
+                                value={
+                                  activation.mpesaNumber
+                                }
+                                onChange={(value) =>
+                                  updateActivation(
+                                    "mpesaNumber",
+                                    value,
+                                  )
+                                }
+                                placeholder="07XXXXXXXX"
                               />
                             </div>
                           </div>
-
-                          <p className="mt-5 text-xs leading-5 text-white/50">
-                            The backend will determine the actual amount due
-                            from the member&apos;s membership and payment
-                            record.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Paid Status */}
-                  {activationStep === 4 &&
-                    !paymentRequired && (
-                      <div className="mt-8">
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
-                          Membership Status
-                        </p>
-
-                        <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
-                          Your membership is already paid.
-                        </h2>
-
-                        <div className="mt-6 rounded-2xl bg-[#E9FFF4] p-5">
-                          <p className="text-sm font-bold text-[#148F5A]">
-                            No payment is required.
-                          </p>
-
-                          <p className="mt-2 text-sm leading-6 text-black/55">
-                            Your membership payment has already been confirmed
-                            by the KUHRSA system. You can continue without
-                            making another payment.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                  {/* Step 5 */}
-                  {activationStep === 5 && (
-                    <div className="mt-10 text-center">
-                      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F9F4FC] text-3xl font-black text-[#CE26A4]">
-                        ✓
-                      </div>
-
-                      <p className="mt-8 text-xs font-black uppercase tracking-[0.2em] text-[#CE26A4]">
-                        Activation Complete
-                      </p>
-
-                      <h2 className="mt-3 text-4xl font-black tracking-tight text-[#0B2633]">
-                        Welcome back.
-                      </h2>
-
-                      <p className="mx-auto mt-5 max-w-md leading-7 text-black/60">
-                        Your migrated membership activation has been completed.
-                        Your account can now be connected to the KUHRSA Member
-                        Portal.
-                      </p>
-
-                      <div className="mt-7 rounded-2xl bg-[#F9F4FC] p-5 text-left">
-                        <InfoItem
-                          label="Member"
-                          value={
-                            fullName ||
-                            "KUHRSA Member"
-                          }
-                        />
-
-                        <div className="mt-4">
-                          <InfoItem
-                            label="Membership / Registration Number"
-                            value={
-                              activation.identifier ||
-                              "—"
-                            }
-                          />
-                        </div>
-
-                        <div className="mt-4">
-                          <InfoItem
-                            label="Email"
-                            value={
-                              activation.email || "—"
-                            }
-                          />
-                        </div>
-
-                        <div className="mt-4">
-                          <InfoItem
-                            label="Membership Status"
-                            value="Activated"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error */}
-                  {activationError && (
-                    <div className="mt-7 rounded-2xl border border-[#F700BA]/20 bg-[#FFF4FB] px-4 py-3 text-sm font-semibold text-[#AF218D]">
-                      {activationError}
-                    </div>
-                  )}
-
-                  {/* Navigation */}
-                  {activationStep < 5 && (
-                    <div className="mt-8 flex flex-col-reverse gap-3 border-t border-black/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                      <button
-                        type="button"
-                        onClick={
-                          activationStep === 1
-                            ? () => changeMode("login")
-                            : previousActivationStep
-                        }
-                        className="rounded-full border border-black/10 px-6 py-3.5 text-sm font-bold text-[#0B2633] transition hover:bg-[#F9F4FC]"
-                      >
-                        {activationStep === 1
-                          ? "Back to Login"
-                          : "← Back"}
-                      </button>
-
-                      {activationStep === 4 &&
-                      paymentRequired ? (
-                        <button
-                          type="button"
-                          onClick={completeActivation}
-                          className="rounded-full bg-[#F700BA] px-7 py-3.5 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
-                        >
-                          Pay & Activate
-                        </button>
+                        </>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={nextActivationStep}
-                          className="rounded-full bg-[#F700BA] px-7 py-3.5 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
-                        >
-                          Continue →
-                        </button>
+                        <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
+                            Payment Status
+                          </p>
+
+                          <p className="mt-3 text-sm leading-6 text-black/55">
+                            Your membership payment is already up to date.
+                            No additional payment is required.
+                          </p>
+                        </div>
                       )}
                     </div>
                   )}
 
+                  {/* Step 5 */}
                   {activationStep === 5 && (
-                    <div className="mt-8 text-center">
-                      <Link
-                        href="/"
-                        className="text-sm font-semibold text-black/40 transition hover:text-[#CE26A4]"
+                    <div className="mt-8">
+                      <div className="rounded-3xl bg-[#F9F4FC] p-7 text-center">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F700BA] text-2xl font-black text-white">
+                          ✓
+                        </div>
+
+                        <p className="mt-6 text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
+                          Membership Activated
+                        </p>
+
+                        <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
+                          {fullName
+                            ? `Welcome, ${fullName}.`
+                            : "Welcome to KUHRSA."}
+                        </h2>
+
+                        <p className="mt-3 text-sm leading-6 text-black/55">
+                          Your migrated membership activation process has been
+                          completed.
+                        </p>
+
+                        <Link
+                          href="/dashboard"
+                          className="mt-7 inline-flex rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
+                        >
+                          Continue to Member Portal
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Activation Error */}
+                  {activationError && (
+                    <div className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700 ring-1 ring-red-100">
+                      {activationError}
+                    </div>
+                  )}
+
+                  {/* Activation Controls */}
+                  {activationStep < 5 && (
+                    <div className="mt-8 flex items-center justify-between gap-4">
+                      <button
+                        type="button"
+                        onClick={
+                          previousActivationStep
+                        }
+                        disabled={
+                          activationStep === 1
+                        }
+                        className="rounded-full border border-black/10 px-5 py-3 text-sm font-bold text-[#0B2633] transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        ← Back to KUHRSA
-                      </Link>
+                        Back
+                      </button>
+
+                      {activationStep ===
+                      4 ? (
+                        <button
+                          type="button"
+                          onClick={
+                            completeActivation
+                          }
+                          className="rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
+                        >
+                          Complete Activation
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={
+                            nextActivationStep
+                          }
+                          className="rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
+                        >
+                          Continue
+                        </button>
+                      )}
                     </div>
                   )}
                 </>
@@ -1019,14 +1052,14 @@ function Field({
   label,
   value,
   onChange,
-  type = "text",
   placeholder,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder: string;
   type?: string;
-  placeholder?: string;
 }) {
   return (
     <div>
@@ -1041,78 +1074,8 @@ function Field({
           onChange(event.target.value)
         }
         placeholder={placeholder}
-        className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#F700BA] focus:ring-2 focus:ring-[#F700BA]/15"
+        className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#CE26A4] focus:ring-2 focus:ring-[#CE26A4]/15"
       />
-    </div>
-  );
-}
-
-function PaymentOption({
-  title,
-  description,
-  selected,
-  onClick,
-  pink = false,
-}: {
-  title: string;
-  description: string;
-  selected: boolean;
-  onClick: () => void;
-  pink?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full rounded-2xl border p-5 text-left transition ${
-        selected
-          ? pink
-            ? "border-[#F700BA] bg-[#FFF4FB]"
-            : "border-[#CE26A4] bg-[#F9F4FC]"
-          : "border-black/10 bg-white hover:bg-[#F9F4FC]"
-      }`}
-    >
-      <span className="block text-sm font-black text-[#0B2633]">
-        {title}
-      </span>
-
-      <span className="mt-2 block text-xs leading-5 text-black/50">
-        {description}
-      </span>
-    </button>
-  );
-}
-
-function PaymentRow({
-  label,
-  value,
-  strong = false,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span
-        className={
-          strong
-            ? "text-sm font-black text-white"
-            : "text-sm text-white/60"
-        }
-      >
-        {label}
-      </span>
-
-      <span
-        className={
-          strong
-            ? "text-sm font-black text-white"
-            : "text-sm font-semibold text-white"
-        }
-      >
-        {value}
-      </span>
     </div>
   );
 }
@@ -1126,7 +1089,7 @@ function InfoItem({
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-black/35">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-black/35">
         {label}
       </p>
 

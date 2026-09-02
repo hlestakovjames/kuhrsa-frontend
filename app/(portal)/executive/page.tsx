@@ -118,6 +118,7 @@ export default function ExecutivePage() {
                 emailId="executive-email"
                 emailPlaceholder="Enter your executive email"
                 accent="blue"
+                portal="executive"
               />
 
               {/* Support */}
@@ -146,8 +147,8 @@ export default function ExecutivePage() {
 
               <div className="mt-8 rounded-2xl border border-black/10 bg-white px-4 py-3 text-center">
                 <p className="text-xs leading-5 text-black/45">
-                  Executive authentication and role-based access will be
-                  connected during backend integration.
+                  Executive authentication and role-based access are connected
+                  to the KUHRSA authentication service.
                 </p>
               </div>
             </div>

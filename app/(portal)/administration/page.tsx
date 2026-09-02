@@ -118,6 +118,7 @@ export default function AdministrationPage() {
                 emailId="admin-email"
                 emailPlaceholder="Enter your administration email"
                 accent="pink"
+                portal="administration"
               />
 
               {/* Support */}
@@ -146,8 +147,8 @@ export default function AdministrationPage() {
 
               <div className="mt-8 rounded-2xl border border-black/10 bg-white px-4 py-3 text-center">
                 <p className="text-xs leading-5 text-black/45">
-                  Administration authentication and role-based permissions
-                  will be connected during backend integration.
+                  Administration authentication and role-based permissions are
+                  connected to the KUHRSA authentication service.
                 </p>
               </div>
             </div>
