@@ -150,28 +150,63 @@ export function canAccessPortal(
   user: AuthUser,
   portal: PortalType,
 ): boolean {
-  if (user.isSystemOwner) {
-    return true;
-  }
-
-  const roles = user.roles.map(
-    (role) => role.code,
+  const roles = new Set(
+    user.roles.map(
+      (role) => role.code,
+    ),
   );
 
   switch (portal) {
     case "member":
-      return roles.includes("MEMBER");
+      return (
+        user.isSystemOwner ||
+        roles.has("MEMBER") ||
+        roles.has("EXECUTIVE") ||
+        roles.has("ADMINISTRATOR") ||
+        roles.has("SUPER_ADMINISTRATOR")
+      );
 
     case "executive":
-      return roles.includes("EXECUTIVE");
+      return (
+        !user.isSystemOwner &&
+        roles.has("EXECUTIVE")
+      );
 
     case "administration":
       return (
-        roles.includes("ADMINISTRATOR") ||
-        roles.includes("SUPER_ADMINISTRATOR")
+        user.isSystemOwner ||
+        roles.has("ADMINISTRATOR") ||
+        roles.has("SUPER_ADMINISTRATOR")
       );
 
     default:
       return false;
   }
+}
+
+export function getLandingPath(
+  user: AuthUser,
+): string {
+  if (user.isSystemOwner) {
+    return "/administration/dashboard";
+  }
+
+  const roles = new Set(
+    user.roles.map(
+      (role) => role.code,
+    ),
+  );
+
+  if (
+    roles.has("SUPER_ADMINISTRATOR") ||
+    roles.has("ADMINISTRATOR")
+  ) {
+    return "/administration/dashboard";
+  }
+
+  if (roles.has("EXECUTIVE")) {
+    return "/executive/dashboard";
+  }
+
+  return "/dashboard";
 }

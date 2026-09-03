@@ -422,19 +422,19 @@ export default function ProtectedDashboard({
               links={[
                 {
                   title: "Members",
-                  href: "/resources/members",
+                  href: "/executive/members",
                 },
                 {
                   title: "Membership",
-                  href: "/membership",
+                  href: "/executive/membership",
                 },
                 {
                   title: "Events",
-                  href: "/events/upcoming",
+                  href: "/executive/events",
                 },
                 {
                   title: "Activities",
-                  href: "/activities/current",
+                  href: "/executive/activities",
                 },
               ]}
             />
@@ -444,11 +444,11 @@ export default function ProtectedDashboard({
               links={[
                 {
                   title: "Announcements",
-                  href: "/announcements/latest",
+                  href: "/executive/announcements",
                 },
                 {
                   title: "Reports",
-                  href: "/resources",
+                  href: "/executive/reports",
                 },
                 {
                   title: "Departments",
@@ -470,19 +470,19 @@ export default function ProtectedDashboard({
               links={[
                 {
                   title: "Members",
-                  href: "/resources/members",
+                  href: "/administration/members",
                 },
                 {
                   title: "Users",
-                  href: "/resources/members",
+                  href: "/administration/users",
                 },
                 {
                   title: "Roles & Permissions",
-                  href: "/resources",
+                  href: "/administration/roles",
                 },
                 {
                   title: "Departments",
-                  href: "/departments",
+                  href: "/administration/departments",
                 },
               ]}
             />
@@ -492,19 +492,19 @@ export default function ProtectedDashboard({
               links={[
                 {
                   title: "Finance",
-                  href: "/membership/fees",
+                  href: "/administration/finance",
                 },
                 {
                   title: "Announcements",
-                  href: "/announcements",
+                  href: "/administration/announcements",
                 },
                 {
                   title: "Reports",
-                  href: "/resources",
+                  href: "/administration/reports",
                 },
                 {
                   title: "Settings",
-                  href: "/resources",
+                  href: "/administration/settings",
                 },
               ]}
             />

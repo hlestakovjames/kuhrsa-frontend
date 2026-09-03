@@ -34,134 +34,215 @@ type NavItem = {
     | "settings";
 };
 
-const navigation: Record<
-  PortalType,
-  NavItem[]
-> = {
-  member: [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      icon: "dashboard",
-    },
-    {
-      label: "My Membership",
-      href: "/membership",
-      icon: "membership",
-    },
-    {
-      label: "Payments",
-      href: "/membership/fees",
-      icon: "payments",
-    },
-    {
-      label: "Events",
-      href: "/events",
-      icon: "events",
-    },
-    {
-      label: "Activities",
-      href: "/activities",
-      icon: "activities",
-    },
-    {
-      label: "Announcements",
-      href: "/announcements",
-      icon: "announcements",
-    },
-    {
-      label: "Resources",
-      href: "/resources/members",
-      icon: "resources",
-    },
-  ],
-
-  executive: [
-    {
-      label: "Dashboard",
-      href: "/executive/dashboard",
-      icon: "dashboard",
-    },
-    {
-      label: "Members",
-      href: "/resources/members",
-      icon: "users",
-    },
-    {
-      label: "Membership",
-      href: "/membership",
-      icon: "membership",
-    },
-    {
-      label: "Events",
-      href: "/events",
-      icon: "events",
-    },
-    {
-      label: "Activities",
-      href: "/activities",
-      icon: "activities",
-    },
-    {
-      label: "Announcements",
-      href: "/announcements",
-      icon: "announcements",
-    },
-    {
-      label: "Reports",
-      href: "/resources",
-      icon: "reports",
-    },
-  ],
-
-  administration: [
-    {
-      label: "Dashboard",
-      href: "/administration/dashboard",
-      icon: "dashboard",
-    },
-    {
-      label: "Members",
-      href: "/resources/members",
-      icon: "users",
-    },
-    {
-      label: "Users",
-      href: "/resources/members",
-      icon: "users",
-    },
-    {
-      label: "Roles & Permissions",
-      href: "/resources",
-      icon: "roles",
-    },
-    {
-      label: "Departments",
-      href: "/departments",
-      icon: "departments",
-    },
-    {
-      label: "Finance",
-      href: "/membership/fees",
-      icon: "payments",
-    },
-    {
-      label: "Announcements",
-      href: "/announcements",
-      icon: "announcements",
-    },
-    {
-      label: "Reports",
-      href: "/resources",
-      icon: "reports",
-    },
-    {
-      label: "Settings",
-      href: "/resources",
-      icon: "settings",
-    },
-  ],
+type NavSection = {
+  label: string;
+  items: NavItem[];
 };
+
+const memberItems: NavItem[] = [
+  {
+    label: "My Membership",
+    href: "/membership",
+    icon: "membership",
+  },
+  {
+    label: "Payments",
+    href: "/payments",
+    icon: "payments",
+  },
+  {
+    label: "Events",
+    href: "/events",
+    icon: "events",
+  },
+  {
+    label: "Activities",
+    href: "/activities",
+    icon: "activities",
+  },
+  {
+    label: "Announcements",
+    href: "/announcements",
+    icon: "announcements",
+  },
+  {
+    label: "Resources",
+    href: "/resources/members",
+    icon: "resources",
+  },
+];
+
+const executiveItems: NavItem[] = [
+  {
+    label: "Dashboard",
+    href: "/executive/dashboard",
+    icon: "dashboard",
+  },
+  {
+    label: "Members",
+    href: "/executive/members",
+    icon: "users",
+  },
+  {
+    label: "Membership",
+    href: "/executive/membership",
+    icon: "membership",
+  },
+  {
+    label: "Events",
+    href: "/executive/events",
+    icon: "events",
+  },
+  {
+    label: "Activities",
+    href: "/executive/activities",
+    icon: "activities",
+  },
+  {
+    label: "Announcements",
+    href: "/executive/announcements",
+    icon: "announcements",
+  },
+  {
+    label: "Reports",
+    href: "/executive/reports",
+    icon: "reports",
+  },
+];
+
+const administrationItems: NavItem[] = [
+  {
+    label: "Dashboard",
+    href: "/administration/dashboard",
+    icon: "dashboard",
+  },
+  {
+    label: "Members",
+    href: "/administration/members",
+    icon: "users",
+  },
+  {
+    label: "Users",
+    href: "/administration/users",
+    icon: "users",
+  },
+  {
+    label: "Roles & Permissions",
+    href: "/administration/roles",
+    icon: "roles",
+  },
+  {
+    label: "Departments",
+    href: "/administration/departments",
+    icon: "departments",
+  },
+  {
+    label: "Finance",
+    href: "/administration/finance",
+    icon: "payments",
+  },
+  {
+    label: "Membership",
+    href: "/administration/membership",
+    icon: "membership",
+  },
+  {
+    label: "Events",
+    href: "/administration/events",
+    icon: "events",
+  },
+  {
+    label: "Activities",
+    href: "/administration/activities",
+    icon: "activities",
+  },
+  {
+    label: "Announcements",
+    href: "/administration/announcements",
+    icon: "announcements",
+  },
+  {
+    label: "Reports",
+    href: "/administration/reports",
+    icon: "reports",
+  },
+  {
+    label: "Settings",
+    href: "/administration/settings",
+    icon: "settings",
+  },
+];
+
+function getPortalSections(
+  portal: PortalType,
+  user: AuthUser,
+): NavSection[] {
+  const isSystemOwner = user.isSystemOwner;
+
+  const activeRoleCodes = new Set(
+    user.roles.map((role) => role.code),
+  );
+
+  const hasExecutiveAccess =
+    isSystemOwner ||
+    activeRoleCodes.has("EXECUTIVE");
+
+  const hasAdministrationAccess =
+    isSystemOwner ||
+    activeRoleCodes.has("ADMINISTRATOR") ||
+    activeRoleCodes.has("SUPER_ADMINISTRATOR");
+
+  const sections: NavSection[] = [];
+
+  const currentDashboard: NavItem = {
+    label: "Dashboard",
+    href:
+      portal === "member"
+        ? "/dashboard"
+        : portal === "executive"
+          ? "/executive/dashboard"
+          : "/administration/dashboard",
+    icon: "dashboard",
+  };
+
+  if (portal === "member") {
+    sections.push({
+      label: "Member",
+      items: [
+        currentDashboard,
+        ...memberItems,
+      ],
+    });
+
+    return sections;
+  }
+
+  sections.push({
+    label: "Member",
+    items: memberItems,
+  });
+
+  if (portal === "executive" && hasExecutiveAccess) {
+    sections.push({
+      label: "Executive",
+      items: executiveItems,
+    });
+
+    return sections;
+  }
+
+  if (
+    portal === "administration" &&
+    hasAdministrationAccess
+  ) {
+    sections.push({
+      label: "Administration",
+      items: administrationItems,
+    });
+  }
+
+  return sections;
+}
 
 function getInitials(user: AuthUser) {
   const emailName =
@@ -178,9 +259,8 @@ function getInitials(user: AuthUser) {
   }
 
   return (
-    emailName
-      .slice(0, 2)
-      .toUpperCase() || "KU"
+    emailName.slice(0, 2).toUpperCase() ||
+    "KU"
   );
 }
 
@@ -442,6 +522,27 @@ function Icon({
   }
 }
 
+function isPathActive(
+  pathname: string,
+  href: string,
+) {
+  if (href === "/dashboard") {
+    return pathname === "/dashboard";
+  }
+
+  if (
+    href === "/executive/dashboard" ||
+    href === "/administration/dashboard"
+  ) {
+    return pathname === href;
+  }
+
+  return (
+    pathname === href ||
+    pathname.startsWith(`${href}/`)
+  );
+}
+
 export default function DashboardSidebar({
   portal,
   user,
@@ -450,7 +551,12 @@ export default function DashboardSidebar({
   onCloseMobile,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const items = navigation[portal];
+
+  const sections = getPortalSections(
+    portal,
+    user,
+  );
+
   const initials = getInitials(user);
 
   const portalLabel =
@@ -460,11 +566,18 @@ export default function DashboardSidebar({
         ? "Executive Portal"
         : "Administration Portal";
 
+  const dashboardHome =
+    portal === "member"
+      ? "/dashboard"
+      : portal === "executive"
+        ? "/executive/dashboard"
+        : "/administration/dashboard";
+
   const sidebar = (
     <aside className="flex h-screen w-[270px] flex-col border-r border-white/10 bg-[#0B2633] text-white">
       <div className="shrink-0 border-b border-white/10 px-5 py-5">
         <Link
-          href="/"
+          href={dashboardHome}
           onClick={onCloseMobile}
           className="flex items-center gap-3"
         >
@@ -492,41 +605,53 @@ export default function DashboardSidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5">
-        <p className="px-3 pb-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/30">
-          Navigation
-        </p>
-
-        <nav className="space-y-1">
-          {items.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !==
-                "/dashboard" &&
-                item.href !==
-                  "/executive/dashboard" &&
-                item.href !==
-                  "/administration/dashboard" &&
-                pathname.startsWith(
-                  `${item.href}/`,
-                ));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onCloseMobile}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
-                  active
-                    ? "bg-[#168DB8] text-white shadow-lg shadow-[#168DB8]/20"
-                    : "text-white/60 hover:bg-white/[0.06] hover:text-white"
-                }`}
+        <nav className="space-y-6">
+          {sections.map(
+            (section) => (
+              <div
+                key={section.label}
               >
-                <Icon type={item.icon} />
+                <p className="px-3 pb-2 text-[10px] font-black uppercase tracking-[0.18em] text-white/30">
+                  {section.label}
+                </p>
 
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+                <div className="space-y-1">
+                  {section.items.map(
+                    (item) => {
+                      const active =
+                        isPathActive(
+                          pathname,
+                          item.href,
+                        );
+
+                      return (
+                        <Link
+                          key={`${section.label}-${item.href}`}
+                          href={item.href}
+                          onClick={
+                            onCloseMobile
+                          }
+                          className={`group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                            active
+                              ? "bg-[#168DB8] text-white shadow-lg shadow-[#168DB8]/20"
+                              : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+                          }`}
+                        >
+                          <Icon
+                            type={item.icon}
+                          />
+
+                          <span>
+                            {item.label}
+                          </span>
+                        </Link>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+            ),
+          )}
         </nav>
       </div>
 
@@ -546,7 +671,8 @@ export default function DashboardSidebar({
                 ? "System Owner"
                 : user.roles
                     .map(
-                      (role) => role.name,
+                      (role) =>
+                        role.name,
                     )
                     .join(", ")}
             </p>

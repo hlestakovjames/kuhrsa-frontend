@@ -1,9 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  FormEvent,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   canAccessPortal,
+  getLandingPath,
   login,
   PortalType,
 } from "@/lib/auth";
@@ -30,10 +34,13 @@ export default function PortalLoginForm({
 
   const [email, setEmail] =
     useState("");
+
   const [password, setPassword] =
     useState("");
+
   const [error, setError] =
     useState("");
+
   const [loading, setLoading] =
     useState(false);
 
@@ -65,23 +72,13 @@ export default function PortalLoginForm({
         )
       ) {
         throw new Error(
-          "Your account does not have access to this portal.",
+          `Your account does not have access to the ${portal} portal.`,
         );
       }
 
-      if (portal === "executive") {
-        router.push(
-          "/executive/dashboard",
-        );
-      } else if (
-        portal === "administration"
-      ) {
-        router.push(
-          "/administration/dashboard",
-        );
-      } else {
-        router.push("/dashboard");
-      }
+      router.replace(
+        getLandingPath(result.user),
+      );
     } catch (submitError) {
       setError(
         submitError instanceof Error

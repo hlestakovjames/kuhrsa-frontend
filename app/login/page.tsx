@@ -2,23 +2,53 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/auth";
+import {
+  getLandingPath,
+  login,
+} from "@/lib/auth";
 
-type AccessMode = "login" | "activate";
-type ActivationStep = 1 | 2 | 3 | 4 | 5;
+type AccessMode =
+  | "login"
+  | "activate";
+
+type ActivationStep =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
 
 type MembershipPaymentStatus =
   | "PAID"
   | "DUE";
 
 const activationSteps = [
-  { number: 1, label: "Identify" },
-  { number: 2, label: "Verify" },
-  { number: 3, label: "Account" },
-  { number: 4, label: "Payment" },
-  { number: 5, label: "Complete" },
+  {
+    number: 1,
+    label: "Identify",
+  },
+  {
+    number: 2,
+    label: "Verify",
+  },
+  {
+    number: 3,
+    label: "Account",
+  },
+  {
+    number: 4,
+    label: "Payment",
+  },
+  {
+    number: 5,
+    label: "Complete",
+  },
 ] as const;
 
 export default function LoginPage() {
@@ -59,27 +89,30 @@ export default function LoginPage() {
     membershipPaymentStatus,
     setMembershipPaymentStatus,
   ] =
-    useState<MembershipPaymentStatus>("DUE");
+    useState<MembershipPaymentStatus>(
+      "DUE",
+    );
 
-  const [activation, setActivation] = useState({
-    identifier: "",
-    email: "",
-    phone: "",
+  const [activation, setActivation] =
+    useState({
+      identifier: "",
+      email: "",
+      phone: "",
 
-    registrationNumber: "",
-    membershipNumber: "",
+      registrationNumber: "",
+      membershipNumber: "",
 
-    firstName: "",
-    lastName: "",
-    admissionNumber: "",
+      firstName: "",
+      lastName: "",
+      admissionNumber: "",
 
-    password: "",
-    confirmPassword: "",
-    acceptTerms: false,
+      password: "",
+      confirmPassword: "",
+      acceptTerms: false,
 
-    paymentMethod: "M-Pesa",
-    mpesaNumber: "",
-  });
+      paymentMethod: "M-Pesa",
+      mpesaNumber: "",
+    });
 
   const updateActivation = <
     K extends keyof typeof activation
@@ -95,7 +128,9 @@ export default function LoginPage() {
     setActivationError("");
   };
 
-  const changeMode = (nextMode: AccessMode) => {
+  const changeMode = (
+    nextMode: AccessMode,
+  ) => {
     setMode(nextMode);
     setActivationError("");
     setLoginError("");
@@ -128,29 +163,39 @@ export default function LoginPage() {
       );
 
       /*
-       * The backend has already authenticated the account
-       * and returned its current roles/access information.
+       * The backend has authenticated the account and
+       * returned its current active roles.
        *
-       * The ordinary member entry point goes to the Member Dashboard.
-       * Executive and Administration access can still be reached
-       * from their dedicated portal entry pages.
+       * The landing workspace is selected from those
+       * roles rather than from the route used to log in.
+       *
+       * Member             → /dashboard
+       * Executive          → /executive/dashboard
+       * Administrator      → /administration/dashboard
+       * Super Administrator→ /administration/dashboard
+       * System Owner       → /administration/dashboard
        */
-      if (
-        !result.user.isSystemOwner &&
-        !result.user.roles.some(
+      const hasPortalAccess =
+        result.user.isSystemOwner ||
+        result.user.roles.some(
           (role) =>
             role.code === "MEMBER" ||
             role.code === "EXECUTIVE" ||
-            role.code === "ADMINISTRATOR" ||
-            role.code === "SUPER_ADMINISTRATOR",
-        )
-      ) {
+            role.code ===
+              "ADMINISTRATOR" ||
+            role.code ===
+              "SUPER_ADMINISTRATOR",
+        );
+
+      if (!hasPortalAccess) {
         throw new Error(
           "Your account does not have active KUHRSA portal access.",
         );
       }
 
-      router.push("/dashboard");
+      router.replace(
+        getLandingPath(result.user),
+      );
     } catch (error) {
       setLoginError(
         error instanceof Error
@@ -193,7 +238,10 @@ export default function LoginPage() {
         return "Please create and confirm your password.";
       }
 
-      if (activation.password.length < 8) {
+      if (
+        activation.password.length <
+        8
+      ) {
         return "Your password must contain at least 8 characters.";
       }
 
@@ -218,7 +266,8 @@ export default function LoginPage() {
       }
 
       if (
-        activation.paymentMethod === "M-Pesa" &&
+        activation.paymentMethod ===
+          "M-Pesa" &&
         !activation.mpesaNumber
       ) {
         return "Please enter the M-Pesa number to use for payment.";
@@ -229,9 +278,10 @@ export default function LoginPage() {
   };
 
   const nextActivationStep = () => {
-    const error = validateActivationStep(
-      activationStep,
-    );
+    const error =
+      validateActivationStep(
+        activationStep,
+      );
 
     if (error) {
       setActivationError(error);
@@ -242,7 +292,8 @@ export default function LoginPage() {
 
     if (
       activationStep === 3 &&
-      membershipPaymentStatus === "PAID"
+      membershipPaymentStatus ===
+        "PAID"
     ) {
       setActivationStep(5);
 
@@ -257,7 +308,8 @@ export default function LoginPage() {
     if (activationStep < 5) {
       setActivationStep(
         (current) =>
-          (current + 1) as ActivationStep,
+          (current +
+            1) as ActivationStep,
       );
 
       window.scrollTo({
@@ -273,7 +325,8 @@ export default function LoginPage() {
     if (activationStep > 1) {
       setActivationStep(
         (current) =>
-          (current - 1) as ActivationStep,
+          (current -
+            1) as ActivationStep,
       );
 
       window.scrollTo({
@@ -284,7 +337,8 @@ export default function LoginPage() {
   };
 
   const completeActivation = () => {
-    const error = validateActivationStep(4);
+    const error =
+      validateActivationStep(4);
 
     if (error) {
       setActivationError(error);
@@ -487,7 +541,9 @@ export default function LoginPage() {
                 <>
                   <form
                     className="mt-8 grid gap-5"
-                    onSubmit={handleMemberLogin}
+                    onSubmit={
+                      handleMemberLogin
+                    }
                   >
                     <div>
                       <label
@@ -503,13 +559,17 @@ export default function LoginPage() {
                         type="text"
                         autoComplete="username"
                         placeholder="Email or registration number"
-                        value={loginIdentifier}
+                        value={
+                          loginIdentifier
+                        }
                         onChange={(event) =>
                           setLoginIdentifier(
                             event.target.value,
                           )
                         }
-                        disabled={loginLoading}
+                        disabled={
+                          loginLoading
+                        }
                         className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
                       />
                     </div>
@@ -528,13 +588,17 @@ export default function LoginPage() {
                         type="password"
                         autoComplete="current-password"
                         placeholder="Enter your password"
-                        value={loginPassword}
+                        value={
+                          loginPassword
+                        }
                         onChange={(event) =>
                           setLoginPassword(
                             event.target.value,
                           )
                         }
-                        disabled={loginLoading}
+                        disabled={
+                          loginLoading
+                        }
                         className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
                       />
                     </div>
@@ -547,7 +611,9 @@ export default function LoginPage() {
 
                     <button
                       type="submit"
-                      disabled={loginLoading}
+                      disabled={
+                        loginLoading
+                      }
                       className={`mt-1 rounded-full bg-[#168DB8] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D] ${
                         loginLoading
                           ? "cursor-not-allowed opacity-60"
@@ -594,7 +660,9 @@ export default function LoginPage() {
                         {activationSteps.map(
                           (item) => (
                             <div
-                              key={item.number}
+                              key={
+                                item.number
+                              }
                               className={`h-1.5 flex-1 rounded-full ${
                                 item.number <=
                                 activationStep
@@ -608,13 +676,18 @@ export default function LoginPage() {
 
                       <div className="mt-3 flex items-center justify-between text-xs text-black/40">
                         <span>
-                          Step {activationStep} of 4
+                          Step{" "}
+                          {
+                            activationStep
+                          }{" "}
+                          of 4
                         </span>
 
                         <span>
                           {
                             activationSteps[
-                              activationStep - 1
+                              activationStep -
+                                1
                             ]?.label
                           }
                         </span>
@@ -623,7 +696,8 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 1 */}
-                  {activationStep === 1 && (
+                  {activationStep ===
+                    1 && (
                     <div className="mt-8">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
                         Step 1
@@ -688,7 +762,8 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 2 */}
-                  {activationStep === 2 && (
+                  {activationStep ===
+                    2 && (
                     <div className="mt-8">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
                         Step 2
@@ -790,7 +865,8 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 3 */}
-                  {activationStep === 3 && (
+                  {activationStep ===
+                    3 && (
                     <div className="mt-8">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
                         Step 3
@@ -858,10 +934,13 @@ export default function LoginPage() {
                           checked={
                             activation.acceptTerms
                           }
-                          onChange={(event) =>
+                          onChange={(
+                            event,
+                          ) =>
                             updateActivation(
                               "acceptTerms",
-                              event.target.checked,
+                              event.target
+                                .checked,
                             )
                           }
                           className="mt-1 h-4 w-4 rounded border-black/20 accent-[#F700BA]"
@@ -889,7 +968,8 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 4 */}
-                  {activationStep === 4 && (
+                  {activationStep ===
+                    4 && (
                     <div className="mt-8">
                       <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
                         Step 4
@@ -917,7 +997,9 @@ export default function LoginPage() {
                                 value={
                                   activation.paymentMethod
                                 }
-                                onChange={(value) =>
+                                onChange={(
+                                  value,
+                                ) =>
                                   updateActivation(
                                     "paymentMethod",
                                     value,
@@ -932,7 +1014,9 @@ export default function LoginPage() {
                                 value={
                                   activation.mpesaNumber
                                 }
-                                onChange={(value) =>
+                                onChange={(
+                                  value,
+                                ) =>
                                   updateActivation(
                                     "mpesaNumber",
                                     value,
@@ -959,7 +1043,8 @@ export default function LoginPage() {
                   )}
 
                   {/* Step 5 */}
-                  {activationStep === 5 && (
+                  {activationStep ===
+                    5 && (
                     <div className="mt-8">
                       <div className="rounded-3xl bg-[#F9F4FC] p-7 text-center">
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#F700BA] text-2xl font-black text-white">
@@ -1007,7 +1092,8 @@ export default function LoginPage() {
                           previousActivationStep
                         }
                         disabled={
-                          activationStep === 1
+                          activationStep ===
+                          1
                         }
                         className="rounded-full border border-black/10 px-5 py-3 text-sm font-bold text-[#0B2633] transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
                       >
@@ -1071,7 +1157,9 @@ function Field({
         type={type}
         value={value}
         onChange={(event) =>
-          onChange(event.target.value)
+          onChange(
+            event.target.value,
+          )
         }
         placeholder={placeholder}
         className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#CE26A4] focus:ring-2 focus:ring-[#CE26A4]/15"
