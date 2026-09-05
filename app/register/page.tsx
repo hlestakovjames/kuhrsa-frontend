@@ -2,16 +2,27 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-type RegistrationData = {
+type Category = "STUDENT" | "ALUMNI" | "LECTURER";
+
+type FormData = {
+  category: Category;
+
   firstName: string;
   lastName: string;
 
-  admissionNumber: string;
+  registrationNumber: string;
   yearOfStudy: string;
+
+  nationalId: string;
+  graduationYear: string;
+
+  staffNumber: string;
+  position: string;
+
   programme: string;
   faculty: string;
   department: string;
@@ -21,33 +32,83 @@ type RegistrationData = {
   address: string;
   county: string;
 
-  membershipCategory: string;
-  membershipType: string;
-
   password: string;
   confirmPassword: string;
   acceptTerms: boolean;
-
-  paymentMethod: string;
-  mpesaNumber: string;
 };
 
-const steps = [
-  { number: 1, label: "Personal" },
-  { number: 2, label: "Academic" },
-  { number: 3, label: "Contact" },
-  { number: 4, label: "Membership" },
-  { number: 5, label: "Account" },
-  { number: 6, label: "Review" },
-  { number: 7, label: "Payment" },
-] as const;
+type RegistrationResponse = {
+  message: string;
 
-const initialData: RegistrationData = {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    phone: string | null;
+    status: string;
+  };
+
+  member: {
+    id: string;
+    memberNumber: string;
+    category: string;
+    registrationNumber: string | null;
+    admissionNumber: string | null;
+    yearOfStudy: number | null;
+    graduationYear: number | null;
+    staffNumber: string | null;
+    position: string | null;
+    programme: string | null;
+    faculty: string | null;
+    department: string | null;
+    status: string;
+    source: string;
+    activationStatus: string;
+  };
+
+  membership: {
+    membershipYear: string;
+    startsAt: string;
+    endsAt: string;
+    status: string;
+  };
+
+  payment: {
+    required: boolean;
+    registrationFee: number;
+    annualMembershipFee: number;
+    total: number;
+    status: string;
+  };
+};
+
+type ApiErrorResponse = {
+  message?: string | string[] | Record<string, unknown>;
+  error?: string;
+  statusCode?: number;
+  code?: string;
+};
+
+type ReviewRow = readonly [string, string];
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+const initialForm: FormData = {
+  category: "STUDENT",
+
   firstName: "",
   lastName: "",
 
-  admissionNumber: "",
+  registrationNumber: "",
   yearOfStudy: "",
+
+  nationalId: "",
+  graduationYear: "",
+
+  staffNumber: "",
+  position: "",
+
   programme: "",
   faculty: "",
   department: "",
@@ -57,1045 +118,1611 @@ const initialData: RegistrationData = {
   address: "",
   county: "",
 
-  membershipCategory: "Student Member",
-  membershipType: "Annual Membership",
-
   password: "",
   confirmPassword: "",
   acceptTerms: false,
-
-  paymentMethod: "M-Pesa",
-  mpesaNumber: "",
 };
 
-const registrationFee = 250;
-const annualMembershipFee = 200;
-const totalAmount = registrationFee + annualMembershipFee;
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ??
+  "http://localhost:3001";
+
+const steps = [
+  {
+    number: 1,
+    title: "Category",
+    description: "Choose your KUHRSA membership category.",
+  },
+  {
+    number: 2,
+    title: "Personal",
+    description: "Tell us about yourself.",
+  },
+  {
+    number: 3,
+    title: "Membership",
+    description: "Provide your category-specific details.",
+  },
+  {
+    number: 4,
+    title: "Contact",
+    description: "How can KUHRSA reach you?",
+  },
+  {
+    number: 5,
+    title: "Account",
+    description: "Create your portal account.",
+  },
+  {
+    number: 6,
+    title: "Review",
+    description: "Check your information.",
+  },
+  {
+    number: 7,
+    title: "Status",
+    description: "Your registration status.",
+  },
+];
+
+const categoryOptions: Array<{
+  value: Category;
+  title: string;
+  description: string;
+  shortCode: string;
+}> = [
+  {
+    value: "STUDENT",
+    title: "Student",
+    description:
+      "For currently enrolled Kisii University students.",
+    shortCode: "S",
+  },
+  {
+    value: "ALUMNI",
+    title: "Alumni",
+    description:
+      "For graduates and former Kisii University students.",
+    shortCode: "A",
+  },
+  {
+    value: "LECTURER",
+    title: "Lecturer",
+    description:
+      "For Kisii University academic and teaching staff.",
+    shortCode: "L",
+  },
+];
+
+function formatAmount(amount: number) {
+  return new Intl.NumberFormat("en-KE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function getReadableCategory(category: Category) {
+  switch (category) {
+    case "STUDENT":
+      return "Student";
+    case "ALUMNI":
+      return "Alumni";
+    case "LECTURER":
+      return "Lecturer";
+    default:
+      return category;
+  }
+}
+
+function getApiErrorMessage(payload: ApiErrorResponse) {
+  if (
+    payload &&
+    typeof payload.message === "object" &&
+    !Array.isArray(payload.message)
+  ) {
+    const nestedCode =
+      typeof payload.message.code === "string"
+        ? payload.message.code
+        : undefined;
+
+    const nestedMessage =
+      typeof payload.message.message === "string"
+        ? payload.message.message
+        : undefined;
+
+    if (nestedCode) {
+      return mapBackendErrorCode(nestedCode);
+    }
+
+    if (nestedMessage) {
+      return nestedMessage;
+    }
+  }
+
+  if (typeof payload.code === "string") {
+    return mapBackendErrorCode(payload.code);
+  }
+
+  if (Array.isArray(payload.message)) {
+    return payload.message.join(" ");
+  }
+
+  if (typeof payload.message === "string") {
+    return payload.message;
+  }
+
+  if (typeof payload.error === "string") {
+    return payload.error;
+  }
+
+  return "Registration could not be completed. Please try again.";
+}
+
+function mapBackendErrorCode(code: string) {
+  switch (code) {
+    case "EMAIL_IN_USE":
+      return "This email address is already registered.";
+
+    case "PHONE_IN_USE":
+      return "This phone number is already registered.";
+
+    case "MEMBER_IDENTIFIER_IN_USE":
+      return "This registration/admission number is already registered.";
+
+    case "NATIONAL_ID_IN_USE":
+      return "This National ID is already associated with a KUHRSA member.";
+
+    case "STAFF_NUMBER_IN_USE":
+      return "This staff number is already registered.";
+
+    case "INVALID_YEAR_OF_STUDY":
+      return "Student year of study must be between Year 1 and Year 4.";
+
+    case "INVALID_GRADUATION_YEAR":
+      return `Please provide a valid graduation year between 2020 and ${CURRENT_YEAR}.`;
+
+    default:
+      return "The information provided could not be accepted. Please review your details and try again.";
+  }
+}
 
 export default function RegisterPage() {
   const [step, setStep] = useState<Step>(1);
-  const [form, setForm] = useState<RegistrationData>(initialData);
-  const [error, setError] = useState("");
-  const [completed, setCompleted] = useState(false);
+  const [form, setForm] = useState<FormData>(initialForm);
 
-  const updateField = <K extends keyof RegistrationData>(
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [registration, setRegistration] =
+    useState<RegistrationResponse | null>(null);
+
+  const currentStep = steps[step - 1];
+
+  const totalAmount = useMemo(() => 250 + 200, []);
+
+  const membershipRows: ReviewRow[] = (() => {
+    const rows: ReviewRow[] = [];
+
+    if (form.category === "STUDENT") {
+      rows.push(
+        [
+          "Registration / Admission No.",
+          form.registrationNumber,
+        ],
+        [
+          "Year of Study",
+          `Year ${form.yearOfStudy}`,
+        ],
+        [
+          "Programme",
+          form.programme,
+        ],
+      );
+    }
+
+    if (form.category === "ALUMNI") {
+      rows.push(
+        [
+          "National ID",
+          form.nationalId,
+        ],
+        [
+          "Registration No.",
+          form.registrationNumber || "—",
+        ],
+        [
+          "Graduation Year",
+          form.graduationYear,
+        ],
+        [
+          "Programme",
+          form.programme,
+        ],
+      );
+    }
+
+    if (form.category === "LECTURER") {
+      rows.push(
+        [
+          "Staff No.",
+          form.staffNumber,
+        ],
+        [
+          "Position",
+          form.position,
+        ],
+      );
+    }
+
+    rows.push(
+      [
+        "Faculty / School",
+        form.faculty,
+      ],
+      [
+        "Department",
+        form.department,
+      ],
+    );
+
+    return rows;
+  })();
+
+  function updateField<K extends keyof FormData>(
     field: K,
-    value: RegistrationData[K],
-  ) => {
+    value: FormData[K],
+  ) {
     setForm((current) => ({
       ...current,
       [field]: value,
     }));
 
-    setError("");
-  };
+    if (error) {
+      setError("");
+    }
+  }
 
-  const validateStep = (currentStep: Step) => {
+  function validateStep(currentStep: Step) {
+    setError("");
+
     if (currentStep === 1) {
-      if (!form.firstName || !form.lastName) {
-        return "Please enter your first and last name.";
+      if (!form.category) {
+        setError(
+          "Please select a membership category.",
+        );
+        return false;
       }
     }
 
     if (currentStep === 2) {
       if (
-        !form.admissionNumber ||
-        !form.yearOfStudy ||
-        !form.programme ||
-        !form.faculty ||
-        !form.department
+        !form.firstName.trim() ||
+        !form.lastName.trim()
       ) {
-        return "Please complete all required academic details.";
+        setError(
+          "First name and last name are required.",
+        );
+        return false;
       }
     }
 
     if (currentStep === 3) {
-      if (
-        !form.email ||
-        !form.phone ||
-        !form.address ||
-        !form.county
-      ) {
-        return "Please complete all required contact details.";
+      if (form.category === "STUDENT") {
+        if (!form.registrationNumber.trim()) {
+          setError(
+            "University registration / admission number is required.",
+          );
+          return false;
+        }
+
+        if (
+          !["1", "2", "3", "4"].includes(
+            form.yearOfStudy,
+          )
+        ) {
+          setError(
+            "Please select a valid year of study.",
+          );
+          return false;
+        }
+
+        if (!form.programme.trim()) {
+          setError("Programme is required.");
+          return false;
+        }
+      }
+
+      if (form.category === "ALUMNI") {
+        if (!form.nationalId.trim()) {
+          setError(
+            "National ID is required for alumni.",
+          );
+          return false;
+        }
+
+        if (!form.graduationYear) {
+          setError("Graduation year is required.");
+          return false;
+        }
+
+        const graduationYear =
+          Number(form.graduationYear);
+
+        if (
+          graduationYear < 2020 ||
+          graduationYear > CURRENT_YEAR
+        ) {
+          setError(
+            `Graduation year must be between 2020 and ${CURRENT_YEAR}.`,
+          );
+          return false;
+        }
+
+        if (!form.programme.trim()) {
+          setError("Programme is required.");
+          return false;
+        }
+      }
+
+      if (form.category === "LECTURER") {
+        if (!form.staffNumber.trim()) {
+          setError(
+            "Staff / Employee Number is required.",
+          );
+          return false;
+        }
+
+        if (!form.position.trim()) {
+          setError("Position is required.");
+          return false;
+        }
+      }
+
+      if (!form.faculty.trim()) {
+        setError("Faculty / School is required.");
+        return false;
+      }
+
+      if (!form.department.trim()) {
+        setError("Department is required.");
+        return false;
       }
     }
 
     if (currentStep === 4) {
-      if (!form.membershipCategory || !form.membershipType) {
-        return "Please select your membership details.";
+      if (!form.email.trim()) {
+        setError("Email address is required.");
+        return false;
+      }
+
+      if (
+        !/^\S+@\S+\.\S+$/.test(
+          form.email.trim(),
+        )
+      ) {
+        setError(
+          "Please provide a valid email address.",
+        );
+        return false;
+      }
+
+      if (!form.phone.trim()) {
+        setError("Phone number is required.");
+        return false;
       }
     }
 
     if (currentStep === 5) {
-      if (!form.password || !form.confirmPassword) {
-        return "Please create and confirm your password.";
-      }
-
       if (form.password.length < 8) {
-        return "Your password must contain at least 8 characters.";
-      }
-
-      if (form.password !== form.confirmPassword) {
-        return "Your passwords do not match.";
-      }
-
-      if (!form.acceptTerms) {
-        return "Please accept the KUHRSA terms and privacy statement.";
-      }
-    }
-
-    if (currentStep === 7) {
-      if (!form.paymentMethod) {
-        return "Please select a payment method.";
+        setError(
+          "Password must be at least 8 characters long.",
+        );
+        return false;
       }
 
       if (
-        form.paymentMethod === "M-Pesa" &&
-        !form.mpesaNumber
+        form.password !== form.confirmPassword
       ) {
-        return "Please enter the M-Pesa number to use for payment.";
+        setError("Passwords do not match.");
+        return false;
+      }
+
+      if (!form.acceptTerms) {
+        setError(
+          "You must accept the KUHRSA terms and conditions.",
+        );
+        return false;
       }
     }
 
-    return "";
-  };
+    return true;
+  }
 
-  const nextStep = () => {
-    const validationError = validateStep(step);
-
-    if (validationError) {
-      setError(validationError);
+  function goNext() {
+    if (!validateStep(step)) {
       return;
     }
 
-    setError("");
-
-    if (step < 7) {
-      setStep((current) => (current + 1) as Step);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  const previousStep = () => {
-    setError("");
-
-    if (step > 1) {
-      setStep((current) => (current - 1) as Step);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  const completePayment = () => {
-    const validationError = validateStep(7);
-
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setError("");
-    setCompleted(true);
-  };
-
-  const fullName = useMemo(
-    () =>
-      [form.firstName, form.lastName]
-        .filter(Boolean)
-        .join(" "),
-    [form.firstName, form.lastName],
-  );
-
-  if (completed) {
-    return (
-      <main className="min-h-screen bg-[#F4FAFC] px-5 py-12 sm:py-16">
-        <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-4xl items-center justify-center">
-          <div className="w-full rounded-[2rem] bg-white p-8 text-center shadow-xl ring-1 ring-black/5 sm:p-12">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#E9FFF4] text-3xl font-black text-[#148F5A]">
-              ✓
-            </div>
-
-            <p className="mt-8 text-xs font-black uppercase tracking-[0.2em] text-[#168DB8]">
-              Registration Complete
-            </p>
-
-            <h1 className="mt-3 text-4xl font-black tracking-tight text-[#0B2633]">
-              Welcome to KUHRSA.
-            </h1>
-
-            <p className="mx-auto mt-5 max-w-xl leading-7 text-black/60">
-              Your registration process has been completed successfully.
-              Your payment and membership status will be confirmed through
-              the KUHRSA membership system.
-            </p>
-
-            <div className="mx-auto mt-8 max-w-md rounded-2xl bg-[#F4FAFC] p-5 text-left">
-              <SummaryLine
-                label="Member"
-                value={fullName || "KUHRSA Member"}
-              />
-
-              <SummaryLine
-                label="Admission Number"
-                value={form.admissionNumber || "—"}
-              />
-
-              <SummaryLine
-                label="Amount"
-                value={`KSh ${totalAmount.toLocaleString()}`}
-                last
-              />
-            </div>
-
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/login"
-                className="rounded-full bg-[#168DB8] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D]"
-              >
-                Go to Member Portal
-              </Link>
-
-              <Link
-                href="/"
-                className="rounded-full border border-black/10 px-6 py-3.5 text-sm font-bold text-[#0B2633] transition hover:bg-[#F4FAFC]"
-              >
-                Back to KUHRSA
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
+    setStep((current) =>
+      current < 7
+        ? ((current + 1) as Step)
+        : current,
     );
   }
 
+  function goBack() {
+    setError("");
+
+    setStep((current) =>
+      current > 1
+        ? ((current - 1) as Step)
+        : current,
+    );
+  }
+
+  async function submitRegistration() {
+    if (!validateStep(5)) {
+      setStep(5);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const payloadToSubmit = {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+
+        category: form.category,
+
+        registrationNumber:
+          form.registrationNumber.trim() || undefined,
+
+        yearOfStudy:
+          form.category === "STUDENT"
+            ? Number(form.yearOfStudy)
+            : undefined,
+
+        graduationYear:
+          form.category === "ALUMNI"
+            ? Number(form.graduationYear)
+            : undefined,
+
+        nationalId:
+          form.category === "ALUMNI"
+            ? form.nationalId.trim()
+            : undefined,
+
+        staffNumber:
+          form.category === "LECTURER"
+            ? form.staffNumber.trim()
+            : undefined,
+
+        position:
+          form.category === "LECTURER"
+            ? form.position.trim()
+            : undefined,
+
+        programme:
+          form.category === "STUDENT" ||
+          form.category === "ALUMNI"
+            ? form.programme.trim()
+            : undefined,
+
+        faculty: form.faculty.trim(),
+        department: form.department.trim(),
+
+        email: form.email
+          .trim()
+          .toLowerCase(),
+
+        phone: form.phone.trim(),
+
+        address:
+          form.address.trim() || undefined,
+
+        county:
+          form.county.trim() || undefined,
+
+        password: form.password,
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            payloadToSubmit,
+          ),
+        },
+      );
+
+      const payload =
+        (await response.json()) as
+          | RegistrationResponse
+          | ApiErrorResponse;
+
+      if (!response.ok) {
+        throw new Error(
+          getApiErrorMessage(
+            payload as ApiErrorResponse,
+          ),
+        );
+      }
+
+      setRegistration(
+        payload as RegistrationResponse,
+      );
+
+      setStep(7);
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Registration could not be completed. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (step === 6) {
+      await submitRegistration();
+      return;
+    }
+
+    if (step < 6) {
+      goNext();
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-[#F4FAFC] px-5 py-10 sm:py-14">
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-10 text-center">
+    <main className="min-h-screen bg-[#F4FAFC] text-[#0B2633]">
+      <div className="border-b border-black/5 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-3"
+            className="flex items-center gap-3"
+            aria-label="KUHRSA home"
           >
-            <div className="relative h-12 w-12 overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/10">
+            <div className="relative h-11 w-11 overflow-hidden rounded-full bg-white shadow-sm">
               <Image
                 src="/images/kuhrsa_logo.jpeg"
                 alt="KUHRSA official logo"
                 fill
-                sizes="48px"
+                sizes="44px"
                 className="object-contain p-1"
+                priority
               />
             </div>
 
-            <div className="text-left">
-              <div className="text-xl font-black tracking-tight text-[#0B2633]">
+            <div>
+              <div className="text-lg font-black tracking-tight text-[#0B2633]">
                 KUHRSA
               </div>
 
-              <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#168DB8]">
-                Student Association
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#168DB8]">
+                Membership Registration
               </div>
             </div>
           </Link>
 
-          <p className="mt-8 text-xs font-black uppercase tracking-[0.2em] text-[#168DB8]">
-            Membership Registration
-          </p>
-
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-[#0B2633] sm:text-5xl">
-            Join KUHRSA.
-          </h1>
-
-          <p className="mx-auto mt-4 max-w-2xl leading-7 text-black/60">
-            Complete your membership registration step by step, review your
-            information, and finish by completing payment.
-          </p>
+          <Link
+            href="/login"
+            className="rounded-full border border-[#0B2633]/10 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-[#0B2633] transition hover:border-[#168DB8] hover:text-[#168DB8]"
+          >
+            Login
+          </Link>
         </div>
+      </div>
 
-        {/* Progress */}
-        <div className="mb-8 rounded-[2rem] bg-white p-4 shadow-lg ring-1 ring-black/5 sm:p-6">
-          <div className="flex items-start justify-between gap-2 overflow-x-auto">
-            {steps.map((item, index) => {
-              const active = item.number === step;
-              const complete = item.number < step;
+      <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8 lg:py-12">
+        <div className="grid gap-8 lg:grid-cols-[250px_1fr]">
+          <aside className="rounded-3xl border border-black/5 bg-white p-5 shadow-sm lg:h-fit">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
+              KUHRSA
+            </p>
 
-              return (
-                <div
-                  key={item.number}
-                  className="flex min-w-[72px] flex-1 items-start"
-                >
-                  <div className="w-full">
-                    <div className="flex items-center">
-                      <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ${
-                          complete
-                            ? "bg-[#168DB8] text-white"
-                            : active
-                              ? "bg-[#0B2633] text-white"
-                              : "bg-[#F4FAFC] text-black/35 ring-1 ring-black/10"
-                        }`}
-                      >
-                        {complete ? "✓" : item.number}
-                      </div>
+            <h1 className="mt-2 text-2xl font-black tracking-tight">
+              Join KUHRSA
+            </h1>
 
-                      {index < steps.length - 1 && (
-                        <div
-                          className={`mx-2 h-0.5 min-w-4 flex-1 ${
-                            complete
-                              ? "bg-[#168DB8]"
-                              : "bg-black/10"
-                          }`}
-                        />
-                      )}
-                    </div>
+            <p className="mt-2 text-sm leading-6 text-black/55">
+              Complete your membership registration
+              in a few simple steps.
+            </p>
 
-                    <p
-                      className={`mt-2 text-[10px] font-black uppercase tracking-[0.08em] ${
+            <div className="mt-6 space-y-2">
+              {steps.map((item) => {
+                const active =
+                  item.number === step;
+
+                const completed =
+                  item.number < step;
+
+                return (
+                  <button
+                    key={item.number}
+                    type="button"
+                    onClick={() => {
+                      if (
+                        item.number < step &&
+                        !submitting
+                      ) {
+                        setError("");
+                        setStep(
+                          item.number as Step,
+                        );
+                      }
+                    }}
+                    disabled={
+                      item.number >= step ||
+                      submitting
+                    }
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                      active
+                        ? "bg-[#0B2633] text-white"
+                        : completed
+                          ? "bg-[#EAF7FB] text-[#0B2633]"
+                          : "text-black/45"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black ${
                         active
-                          ? "text-[#0B2633]"
-                          : complete
-                            ? "text-[#168DB8]"
-                            : "text-black/35"
+                          ? "bg-[#168DB8] text-white"
+                          : completed
+                            ? "bg-[#168DB8] text-white"
+                            : "bg-black/5 text-black/45"
                       }`}
                     >
-                      {item.label}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      {completed
+                        ? "✓"
+                        : item.number}
+                    </span>
 
-          <div className="mt-5 flex items-center justify-between text-xs text-black/45">
-            <span>Step {step} of 7</span>
-            <span>{steps[step - 1].label}</span>
-          </div>
-        </div>
+                    <span>
+                      <span className="block text-sm font-black">
+                        {item.title}
+                      </span>
 
-        {/* Main Registration Card */}
-        <div className="overflow-hidden rounded-[2rem] bg-white shadow-xl ring-1 ring-black/5">
-          <div className="p-6 sm:p-10 lg:p-12">
-            {/* STEP 1 */}
-            {step === 1 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 1"
-                  title="Personal Details"
-                  description="Start your KUHRSA registration with your basic personal information."
-                />
+                      <span
+                        className={`mt-0.5 block text-[11px] ${
+                          active
+                            ? "text-white/60"
+                            : "text-black/40"
+                        }`}
+                      >
+                        {item.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
 
-                <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                  <Field
-                    label="First Name"
-                    value={form.firstName}
-                    onChange={(value) =>
-                      updateField("firstName", value)
-                    }
-                    placeholder="First name"
-                    required
-                    autoComplete="given-name"
-                  />
+          <section className="overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm">
+            <div className="border-b border-black/5 px-6 py-6 sm:px-8">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
+                    Step {step} of 7
+                  </p>
 
-                  <Field
-                    label="Last Name"
-                    value={form.lastName}
-                    onChange={(value) =>
-                      updateField("lastName", value)
-                    }
-                    placeholder="Last name"
-                    required
-                    autoComplete="family-name"
-                  />
-                </div>
-              </section>
-            )}
+                  <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+                    {currentStep.title}
+                  </h2>
 
-            {/* STEP 2 */}
-            {step === 2 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 2"
-                  title="Academic Details"
-                  description="Provide the university information used to identify your KUHRSA membership."
-                />
-
-                <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                  <Field
-                    label="Admission Number"
-                    value={form.admissionNumber}
-                    onChange={(value) =>
-                      updateField("admissionNumber", value)
-                    }
-                    placeholder="Admission number"
-                    required
-                  />
-
-                  <SelectField
-                    label="Year of Study"
-                    value={form.yearOfStudy}
-                    onChange={(value) =>
-                      updateField("yearOfStudy", value)
-                    }
-                    options={[
-                      "Year 1",
-                      "Year 2",
-                      "Year 3",
-                      "Year 4",
-                      "Year 5",
-                      "Year 6",
-                    ]}
-                    required
-                  />
-
-                  <Field
-                    label="Programme"
-                    value={form.programme}
-                    onChange={(value) =>
-                      updateField("programme", value)
-                    }
-                    placeholder="Your academic programme"
-                    required
-                  />
-
-                  <Field
-                    label="Faculty / School"
-                    value={form.faculty}
-                    onChange={(value) =>
-                      updateField("faculty", value)
-                    }
-                    placeholder="Faculty or school"
-                    required
-                  />
-
-                  <Field
-                    label="Department"
-                    value={form.department}
-                    onChange={(value) =>
-                      updateField("department", value)
-                    }
-                    placeholder="Your department"
-                    required
-                  />
-                </div>
-              </section>
-            )}
-
-            {/* STEP 3 */}
-            {step === 3 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 3"
-                  title="Contact Details"
-                  description="Provide contact information that KUHRSA can use to communicate with you."
-                />
-
-                <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                  <Field
-                    label="Email Address"
-                    value={form.email}
-                    onChange={(value) =>
-                      updateField("email", value)
-                    }
-                    type="email"
-                    placeholder="Enter your email address"
-                    required
-                    autoComplete="email"
-                  />
-
-                  <Field
-                    label="Phone Number"
-                    value={form.phone}
-                    onChange={(value) =>
-                      updateField("phone", value)
-                    }
-                    type="tel"
-                    placeholder="Enter your phone number"
-                    required
-                    autoComplete="tel"
-                  />
-
-                  <Field
-                    label="Address / Residence"
-                    value={form.address}
-                    onChange={(value) =>
-                      updateField("address", value)
-                    }
-                    placeholder="Current address or residence"
-                    required
-                  />
-
-                  <Field
-                    label="County"
-                    value={form.county}
-                    onChange={(value) =>
-                      updateField("county", value)
-                    }
-                    placeholder="County"
-                    required
-                  />
-                </div>
-              </section>
-            )}
-
-            {/* STEP 4 */}
-            {step === 4 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 4"
-                  title="Membership"
-                  description="Confirm the membership category and membership type applicable to you."
-                />
-
-                <div className="mt-8 grid gap-5 sm:grid-cols-2">
-                  <SelectField
-                    label="Membership Category"
-                    value={form.membershipCategory}
-                    onChange={(value) =>
-                      updateField(
-                        "membershipCategory",
-                        value,
-                      )
-                    }
-                    options={[
-                      "Student Member",
-                      "Alumni Member",
-                      "Lecturer / Academic Member",
-                    ]}
-                    required
-                  />
-
-                  <SelectField
-                    label="Membership Type"
-                    value={form.membershipType}
-                    onChange={(value) =>
-                      updateField(
-                        "membershipType",
-                        value,
-                      )
-                    }
-                    options={["Annual Membership"]}
-                    required
-                  />
-                </div>
-
-                <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                  <SummaryCard
-                    label="Registration Fee"
-                    value={`KSh ${registrationFee.toLocaleString()}`}
-                  />
-
-                  <SummaryCard
-                    label="Annual Membership"
-                    value={`KSh ${annualMembershipFee.toLocaleString()}`}
-                  />
-
-                  <SummaryCard
-                    label="Total"
-                    value={`KSh ${totalAmount.toLocaleString()}`}
-                    dark
-                  />
-                </div>
-
-                <div className="mt-6 rounded-2xl bg-[#F4FAFC] p-5">
-                  <p className="text-sm leading-6 text-black/55">
-                    The displayed fees are the current frontend
-                    configuration. During backend integration, the payable
-                    amount should be retrieved and validated from the KUHRSA
-                    membership and finance system.
+                  <p className="mt-1 text-sm text-black/50">
+                    {currentStep.description}
                   </p>
                 </div>
-              </section>
-            )}
 
-            {/* STEP 5 */}
-            {step === 5 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 5"
-                  title="Account Setup"
-                  description="Create the credentials you will use to access your KUHRSA Member Portal."
-                />
+                <div className="w-full sm:w-48">
+                  <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-wide text-black/40">
+                    <span>Progress</span>
 
-                <div className="mt-8 grid gap-5 sm:max-w-xl">
-                  <Field
-                    label="Login Email"
-                    value={form.email}
-                    onChange={(value) =>
-                      updateField("email", value)
-                    }
-                    type="email"
-                    placeholder="Your registration email"
-                    required
-                  />
-
-                  <Field
-                    label="Create Password"
-                    value={form.password}
-                    onChange={(value) =>
-                      updateField("password", value)
-                    }
-                    type="password"
-                    placeholder="At least 8 characters"
-                    required
-                    autoComplete="new-password"
-                  />
-
-                  <Field
-                    label="Confirm Password"
-                    value={form.confirmPassword}
-                    onChange={(value) =>
-                      updateField("confirmPassword", value)
-                    }
-                    type="password"
-                    placeholder="Confirm your password"
-                    required
-                    autoComplete="new-password"
-                  />
-                </div>
-
-                <label className="mt-8 flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={form.acceptTerms}
-                    onChange={(event) =>
-                      updateField(
-                        "acceptTerms",
-                        event.target.checked,
-                      )
-                    }
-                    className="mt-1 h-4 w-4 rounded border-black/20 accent-[#168DB8]"
-                  />
-
-                  <span className="text-sm leading-6 text-black/60">
-                    I confirm that the information provided is accurate and
-                    agree to the KUHRSA terms, privacy statement and
-                    membership rules.
-                  </span>
-                </label>
-              </section>
-            )}
-
-            {/* STEP 6 */}
-            {step === 6 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 6"
-                  title="Review & Confirm"
-                  description="Review your registration information before proceeding to payment."
-                />
-
-                <div className="mt-8 grid gap-5">
-                  <ReviewSection
-                    title="Personal Details"
-                    onEdit={() => setStep(1)}
-                    items={[
-                      ["Full Name", fullName || "—"],
-                    ]}
-                  />
-
-                  <ReviewSection
-                    title="Academic Details"
-                    onEdit={() => setStep(2)}
-                    items={[
-                      [
-                        "Admission Number",
-                        form.admissionNumber || "—",
-                      ],
-                      [
-                        "Year of Study",
-                        form.yearOfStudy || "—",
-                      ],
-                      [
-                        "Programme",
-                        form.programme || "—",
-                      ],
-                      [
-                        "Faculty / School",
-                        form.faculty || "—",
-                      ],
-                      [
-                        "Department",
-                        form.department || "—",
-                      ],
-                    ]}
-                  />
-
-                  <ReviewSection
-                    title="Contact Details"
-                    onEdit={() => setStep(3)}
-                    items={[
-                      ["Email", form.email || "—"],
-                      ["Phone", form.phone || "—"],
-                      ["Address", form.address || "—"],
-                      ["County", form.county || "—"],
-                    ]}
-                  />
-
-                  <ReviewSection
-                    title="Membership"
-                    onEdit={() => setStep(4)}
-                    items={[
-                      [
-                        "Category",
-                        form.membershipCategory || "—",
-                      ],
-                      [
-                        "Type",
-                        form.membershipType || "—",
-                      ],
-                      [
-                        "Payable",
-                        `KSh ${totalAmount.toLocaleString()}`,
-                      ],
-                    ]}
-                  />
-
-                  <ReviewSection
-                    title="Account"
-                    onEdit={() => setStep(5)}
-                    items={[
-                      ["Login Email", form.email || "—"],
-                      ["Password", "••••••••"],
-                      [
-                        "Terms Accepted",
-                        form.acceptTerms ? "Yes" : "No",
-                      ],
-                    ]}
-                  />
-                </div>
-              </section>
-            )}
-
-            {/* STEP 7 */}
-            {step === 7 && (
-              <section>
-                <StepHeading
-                  eyebrow="Step 7"
-                  title="Payment"
-                  description="Complete the final step of your KUHRSA registration by paying the applicable amount."
-                />
-
-                <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_0.8fr]">
-                  <div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <PaymentMethod
-                        title="M-Pesa"
-                        description="Pay using your mobile number."
-                        selected={
-                          form.paymentMethod === "M-Pesa"
-                        }
-                        onClick={() =>
-                          updateField(
-                            "paymentMethod",
-                            "M-Pesa",
-                          )
-                        }
-                      />
-
-                      <PaymentMethod
-                        title="Other Method"
-                        description="Additional payment methods can be connected later."
-                        selected={
-                          form.paymentMethod === "Other"
-                        }
-                        pink
-                        onClick={() =>
-                          updateField(
-                            "paymentMethod",
-                            "Other",
-                          )
-                        }
-                      />
-                    </div>
-
-                    {form.paymentMethod === "M-Pesa" && (
-                      <div className="mt-6">
-                        <Field
-                          label="M-Pesa Number"
-                          value={form.mpesaNumber}
-                          onChange={(value) =>
-                            updateField(
-                              "mpesaNumber",
-                              value,
-                            )
-                          }
-                          type="tel"
-                          placeholder="07XX XXX XXX"
-                          required
-                        />
-                      </div>
-                    )}
+                    <span>
+                      {Math.round(
+                        (step / 7) * 100,
+                      )}
+                      %
+                    </span>
                   </div>
 
-                  <div className="rounded-[1.5rem] bg-[#0B2633] p-6 text-white">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/55">
-                      Payment Summary
+                  <div className="h-2 overflow-hidden rounded-full bg-black/5">
+                    <div
+                      className="h-full rounded-full bg-[#168DB8] transition-all"
+                      style={{
+                        width: `${(step / 7) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="px-6 py-7 sm:px-8 sm:py-8">
+                {error && (
+                  <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                {step === 1 && (
+                  <div>
+                    <p className="text-sm font-semibold text-black/55">
+                      Select the category that best
+                      describes your KUHRSA membership.
                     </p>
 
-                    <div className="mt-6 space-y-4">
-                      <PaymentRow
-                        label="Registration Fee"
-                        value={`KSh ${registrationFee.toLocaleString()}`}
-                      />
+                    <div className="mt-6 grid gap-4 md:grid-cols-3">
+                      {categoryOptions.map(
+                        (option) => {
+                          const selected =
+                            form.category ===
+                            option.value;
 
-                      <PaymentRow
-                        label="Annual Membership"
-                        value={`KSh ${annualMembershipFee.toLocaleString()}`}
-                      />
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                updateField(
+                                  "category",
+                                  option.value,
+                                )
+                              }
+                              className={`rounded-3xl border p-5 text-left transition ${
+                                selected
+                                  ? "border-[#168DB8] bg-[#EAF7FB] ring-2 ring-[#168DB8]/20"
+                                  : "border-black/10 hover:border-[#168DB8]/40 hover:bg-[#F8FCFD]"
+                              }`}
+                            >
+                              <div
+                                className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black ${
+                                  selected
+                                    ? "bg-[#168DB8] text-white"
+                                    : "bg-[#0B2633]/5 text-[#0B2633]"
+                                }`}
+                              >
+                                {option.shortCode}
+                              </div>
 
-                      <div className="border-t border-white/15 pt-4">
-                        <PaymentRow
-                          label="Total"
-                          value={`KSh ${totalAmount.toLocaleString()}`}
-                          strong
-                        />
-                      </div>
+                              <h3 className="mt-5 text-lg font-black">
+                                {option.title}
+                              </h3>
+
+                              <p className="mt-2 text-sm leading-6 text-black/50">
+                                {option.description}
+                              </p>
+
+                              <div className="mt-5 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#168DB8]">
+                                <span
+                                  className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                                    selected
+                                      ? "border-[#168DB8] bg-[#168DB8] text-white"
+                                      : "border-black/20"
+                                  }`}
+                                >
+                                  {selected
+                                    ? "✓"
+                                    : ""}
+                                </span>
+
+                                {selected
+                                  ? "Selected"
+                                  : "Select"}
+                              </div>
+                            </button>
+                          );
+                        },
+                      )}
                     </div>
+                  </div>
+                )}
 
-                    <div className="mt-6 rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs leading-5 text-white/65">
-                        Payment processing will be connected to the KUHRSA
-                        backend and payment service during system integration.
+                {step === 2 && (
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field
+                      label="First Name"
+                      required
+                      value={form.firstName}
+                      onChange={(value) =>
+                        updateField(
+                          "firstName",
+                          value,
+                        )
+                      }
+                      placeholder="Enter first name"
+                    />
+
+                    <Field
+                      label="Last Name"
+                      required
+                      value={form.lastName}
+                      onChange={(value) =>
+                        updateField(
+                          "lastName",
+                          value,
+                        )
+                      }
+                      placeholder="Enter last name"
+                    />
+
+                    <div className="sm:col-span-2 rounded-2xl bg-[#F4FAFC] p-5">
+                      <p className="text-sm font-black text-[#0B2633]">
+                        Personal information
+                      </p>
+
+                      <p className="mt-1 text-sm leading-6 text-black/50">
+                        Use your official names as they
+                        should appear on your KUHRSA
+                        membership record.
                       </p>
                     </div>
                   </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
+                        {getReadableCategory(
+                          form.category,
+                        )}
+                      </p>
+
+                      <h3 className="mt-1 text-xl font-black">
+                        Category-specific information
+                      </h3>
+                    </div>
+
+                    {form.category === "STUDENT" && (
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <Field
+                          label="University Registration / Admission Number"
+                          required
+                          value={
+                            form.registrationNumber
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "registrationNumber",
+                              value,
+                            )
+                          }
+                          placeholder="e.g. KSU/XXX/0001"
+                        />
+
+                        <SelectField
+                          label="Year of Study"
+                          required
+                          value={
+                            form.yearOfStudy
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "yearOfStudy",
+                              value,
+                            )
+                          }
+                          options={[
+                            {
+                              value: "1",
+                              label: "Year 1",
+                            },
+                            {
+                              value: "2",
+                              label: "Year 2",
+                            },
+                            {
+                              value: "3",
+                              label: "Year 3",
+                            },
+                            {
+                              value: "4",
+                              label: "Year 4",
+                            },
+                          ]}
+                          placeholder="Select year"
+                        />
+
+                        <Field
+                          label="Programme"
+                          required
+                          value={form.programme}
+                          onChange={(value) =>
+                            updateField(
+                              "programme",
+                              value,
+                            )
+                          }
+                          placeholder="e.g. BSc ICT"
+                        />
+                      </div>
+                    )}
+
+                    {form.category === "ALUMNI" && (
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <Field
+                          label="National ID"
+                          required
+                          value={form.nationalId}
+                          onChange={(value) =>
+                            updateField(
+                              "nationalId",
+                              value,
+                            )
+                          }
+                          placeholder="Enter National ID"
+                        />
+
+                        <Field
+                          label="Registration Number"
+                          value={
+                            form.registrationNumber
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "registrationNumber",
+                              value,
+                            )
+                          }
+                          placeholder="Optional"
+                        />
+
+                        <SelectField
+                          label="Graduation Year"
+                          required
+                          value={
+                            form.graduationYear
+                          }
+                          onChange={(value) =>
+                            updateField(
+                              "graduationYear",
+                              value,
+                            )
+                          }
+                          options={Array.from(
+                            {
+                              length:
+                                CURRENT_YEAR -
+                                2020 +
+                                1,
+                            },
+                            (_, index) => {
+                              const year =
+                                CURRENT_YEAR -
+                                index;
+
+                              return {
+                                value:
+                                  String(year),
+                                label:
+                                  String(year),
+                              };
+                            },
+                          )}
+                          placeholder="Select graduation year"
+                        />
+
+                        <Field
+                          label="Programme"
+                          required
+                          value={form.programme}
+                          onChange={(value) =>
+                            updateField(
+                              "programme",
+                              value,
+                            )
+                          }
+                          placeholder="e.g. BSc ICT"
+                        />
+                      </div>
+                    )}
+
+                    {form.category === "LECTURER" && (
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <Field
+                          label="Staff / Employee Number"
+                          required
+                          value={form.staffNumber}
+                          onChange={(value) =>
+                            updateField(
+                              "staffNumber",
+                              value,
+                            )
+                          }
+                          placeholder="e.g. STAFF-0001"
+                        />
+
+                        <Field
+                          label="Position"
+                          required
+                          value={form.position}
+                          onChange={(value) =>
+                            updateField(
+                              "position",
+                              value,
+                            )
+                          }
+                          placeholder="e.g. Lecturer"
+                        />
+                      </div>
+                    )}
+
+                    <div className="border-t border-black/5 pt-6">
+                      <p className="text-sm font-black">
+                        University / Department Details
+                      </p>
+
+                      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                        <Field
+                          label="Faculty / School"
+                          required
+                          value={form.faculty}
+                          onChange={(value) =>
+                            updateField(
+                              "faculty",
+                              value,
+                            )
+                          }
+                          placeholder="Enter faculty or school"
+                        />
+
+                        <Field
+                          label="Department"
+                          required
+                          value={form.department}
+                          onChange={(value) =>
+                            updateField(
+                              "department",
+                              value,
+                            )
+                          }
+                          placeholder="Enter department"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field
+                      label="Email Address"
+                      required
+                      type="email"
+                      value={form.email}
+                      onChange={(value) =>
+                        updateField(
+                          "email",
+                          value,
+                        )
+                      }
+                      placeholder="you@example.com"
+                    />
+
+                    <Field
+                      label="Phone Number"
+                      required
+                      value={form.phone}
+                      onChange={(value) =>
+                        updateField(
+                          "phone",
+                          value,
+                        )
+                      }
+                      placeholder="07XX XXX XXX"
+                    />
+
+                    <Field
+                      label="Address"
+                      value={form.address}
+                      onChange={(value) =>
+                        updateField(
+                          "address",
+                          value,
+                        )
+                      }
+                      placeholder="Town / postal address"
+                    />
+
+                    <Field
+                      label="County"
+                      value={form.county}
+                      onChange={(value) =>
+                        updateField(
+                          "county",
+                          value,
+                        )
+                      }
+                      placeholder="e.g. Kisii"
+                    />
+                  </div>
+                )}
+
+                {step === 5 && (
+                  <div className="mx-auto max-w-2xl">
+                    <div className="grid gap-5">
+                      <Field
+                        label="Password"
+                        required
+                        type="password"
+                        value={form.password}
+                        onChange={(value) =>
+                          updateField(
+                            "password",
+                            value,
+                          )
+                        }
+                        placeholder="At least 8 characters"
+                      />
+
+                      <Field
+                        label="Confirm Password"
+                        required
+                        type="password"
+                        value={
+                          form.confirmPassword
+                        }
+                        onChange={(value) =>
+                          updateField(
+                            "confirmPassword",
+                            value,
+                          )
+                        }
+                        placeholder="Re-enter your password"
+                      />
+                    </div>
+
+                    <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-[#F4FAFC] p-4">
+                      <input
+                        type="checkbox"
+                        checked={
+                          form.acceptTerms
+                        }
+                        onChange={(event) =>
+                          updateField(
+                            "acceptTerms",
+                            event.target.checked,
+                          )
+                        }
+                        className="mt-1 h-4 w-4 accent-[#168DB8]"
+                      />
+
+                      <span className="text-sm leading-6 text-black/55">
+                        I confirm that the information
+                        provided is accurate and I agree
+                        to abide by the applicable KUHRSA
+                        membership terms and conditions.
+                      </span>
+                    </label>
+
+                    <div className="mt-6 rounded-2xl border border-[#168DB8]/10 bg-white p-5 shadow-sm">
+                      <p className="text-sm font-black">
+                        Your account remains pending
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-black/50">
+                        Completing registration creates
+                        your KUHRSA membership and account
+                        records, but does not mark your
+                        membership as active or your fees
+                        as paid.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {step === 6 && (
+                  <div className="space-y-6">
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <ReviewCard
+                        title="Membership Category"
+                        rows={[
+                          [
+                            "Category",
+                            getReadableCategory(
+                              form.category,
+                            ),
+                          ],
+                        ]}
+                      />
+
+                      <ReviewCard
+                        title="Personal"
+                        rows={[
+                          [
+                            "Name",
+                            `${form.firstName} ${form.lastName}`,
+                          ],
+                        ]}
+                      />
+
+                      <ReviewCard
+                        title="Membership Details"
+                        rows={membershipRows}
+                      />
+
+                      <ReviewCard
+                        title="Contact"
+                        rows={[
+                          [
+                            "Email",
+                            form.email,
+                          ],
+                          [
+                            "Phone",
+                            form.phone,
+                          ],
+                          [
+                            "Address",
+                            form.address || "—",
+                          ],
+                          [
+                            "County",
+                            form.county || "—",
+                          ],
+                        ]}
+                      />
+                    </div>
+
+                    <div className="rounded-3xl bg-[#0B2633] p-6 text-white">
+                      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#5CC7E6]">
+                            Membership fees
+                          </p>
+
+                          <h3 className="mt-2 text-xl font-black">
+                            Amount due
+                          </h3>
+
+                          <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
+                            Payment has not been completed
+                            by registration. The backend
+                            records the required payment as
+                            pending.
+                          </p>
+                        </div>
+
+                        <div className="text-left sm:text-right">
+                          <div className="text-3xl font-black">
+                            KSh{" "}
+                            {formatAmount(
+                              totalAmount,
+                            )}
+                          </div>
+
+                          <div className="mt-1 text-xs font-semibold text-white/45">
+                            KSh 250 registration + KSh
+                            200 annual membership
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {step === 7 &&
+                  registration && (
+                    <div className="mx-auto max-w-3xl">
+                      <div className="text-center">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF7FB] text-2xl text-[#168DB8]">
+                          ✓
+                        </div>
+
+                        <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
+                          Registration submitted
+                        </p>
+
+                        <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                          Welcome to KUHRSA
+                        </h2>
+
+                        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-black/50">
+                          Your registration has been
+                          received successfully. Your
+                          membership and account remain
+                          pending until the KUHRSA processing
+                          workflow is completed.
+                        </p>
+                      </div>
+
+                      <div className="mt-8 grid gap-5 md:grid-cols-2">
+                        <StatusCard
+                          label="Member Number"
+                          value={
+                            registration.member
+                              .memberNumber
+                          }
+                        />
+
+                        <StatusCard
+                          label="Membership Category"
+                          value={getReadableCategory(
+                            form.category,
+                          )}
+                        />
+
+                        <StatusCard
+                          label="Registration Status"
+                          value={
+                            registration.member
+                              .status
+                          }
+                        />
+
+                        <StatusCard
+                          label="Account Status"
+                          value={
+                            registration.user
+                              .status
+                          }
+                        />
+
+                        <StatusCard
+                          label="Membership Period"
+                          value={
+                            registration.membership
+                              .membershipYear
+                          }
+                        />
+
+                        <StatusCard
+                          label="Payment Status"
+                          value={
+                            registration.payment
+                              .status
+                          }
+                        />
+                      </div>
+
+                      <div className="mt-5 rounded-3xl border border-black/5 bg-[#F4FAFC] p-6">
+                        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+                          <div>
+                            <p className="text-sm font-black">
+                              Payment pending
+                            </p>
+
+                            <p className="mt-1 text-sm leading-6 text-black/50">
+                              Your registration created the
+                              payment obligation, but it did
+                              not mark the fees as paid.
+                            </p>
+                          </div>
+
+                          <div className="shrink-0 rounded-2xl bg-white px-5 py-4 shadow-sm">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-black/40">
+                              Amount due
+                            </p>
+
+                            <p className="mt-1 text-xl font-black text-[#0B2633]">
+                              KSh{" "}
+                              {formatAmount(
+                                registration.payment
+                                  .total,
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 rounded-3xl border border-[#168DB8]/10 bg-white p-6 text-center shadow-sm">
+                        <p className="text-sm font-black">
+                          What happens next?
+                        </p>
+
+                        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-black/50">
+                          KUHRSA can now process your
+                          registration, payment and
+                          membership activation through the
+                          administration workflow. You will
+                          access the member portal once your
+                          account is activated.
+                        </p>
+
+                        <div className="mt-5">
+                          <Link
+                            href="/login"
+                            className="inline-flex rounded-full bg-[#0B2633] px-6 py-3 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8]"
+                          >
+                            Go to Login
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+
+              {step < 7 && (
+                <div className="flex flex-col-reverse gap-3 border-t border-black/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={
+                      step === 1 ||
+                      submitting
+                    }
+                    className="rounded-full border border-black/10 px-6 py-3 text-xs font-black uppercase tracking-wide text-[#0B2633] transition hover:border-[#168DB8] hover:text-[#168DB8] disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    Back
+                  </button>
+
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    {step === 5 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            validateStep(5)
+                          ) {
+                            setStep(6);
+                          }
+                        }}
+                        disabled={submitting}
+                        className="rounded-full border border-[#168DB8]/20 bg-[#EAF7FB] px-6 py-3 text-xs font-black uppercase tracking-wide text-[#168DB8] transition hover:bg-[#DDF3F8] disabled:opacity-60"
+                      >
+                        Review
+                      </button>
+                    )}
+
+                    {step !== 5 && (
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        className="rounded-full bg-[#0B2633] px-7 py-3 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {step === 6
+                          ? submitting
+                            ? "Submitting..."
+                            : "Submit Registration"
+                          : "Continue"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </section>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="mt-8 rounded-2xl border border-[#F700BA]/20 bg-[#FFF4FB] px-4 py-3 text-sm font-semibold text-[#AF218D]">
-                {error}
-              </div>
-            )}
-
-            {/* Navigation */}
-            <div className="mt-10 flex flex-col-reverse gap-3 border-t border-black/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                {step > 1 ? (
-                  <button
-                    type="button"
-                    onClick={previousStep}
-                    className="rounded-full border border-black/10 px-6 py-3.5 text-sm font-bold text-[#0B2633] transition hover:bg-[#F4FAFC]"
-                  >
-                    ← Back
-                  </button>
-                ) : (
-                  <Link
-                    href="/"
-                    className="inline-block rounded-full border border-black/10 px-6 py-3.5 text-sm font-bold text-[#0B2633] transition hover:bg-[#F4FAFC]"
-                  >
-                    Cancel
-                  </Link>
-                )}
-              </div>
-
-              <div>
-                {step < 7 ? (
-                  <button
-                    type="button"
-                    onClick={nextStep}
-                    className="w-full rounded-full bg-[#168DB8] px-7 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D] sm:w-auto"
-                  >
-                    {step === 6
-                      ? "Continue to Payment →"
-                      : "Continue →"}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={completePayment}
-                    className="w-full rounded-full bg-[#F700BA] px-7 py-3.5 text-sm font-bold text-white transition hover:bg-[#CE26A4] sm:w-auto"
-                  >
-                    Pay & Complete Registration
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="py-8 text-center">
-          <p className="text-xs leading-5 text-black/40">
-            KUHRSA registration is subject to membership requirements,
-            verification and the association&apos;s applicable rules.
-          </p>
+              )}
+            </form>
+          </section>
         </div>
       </div>
     </main>
   );
 }
 
-function StepHeading({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <>
-      <p className="text-sm font-black uppercase tracking-[0.2em] text-[#168DB8]">
-        {eyebrow}
-      </p>
-
-      <h2 className="mt-3 text-3xl font-black tracking-tight text-[#0B2633] sm:text-4xl">
-        {title}
-      </h2>
-
-      <p className="mt-4 max-w-2xl leading-7 text-black/60">
-        {description}
-      </p>
-    </>
-  );
-}
-
 function Field({
   label,
+  required = false,
   value,
   onChange,
-  type = "text",
   placeholder,
-  required = false,
-  autoComplete,
+  type = "text",
 }: {
   label: string;
+  required?: boolean;
   value: string;
   onChange: (value: string) => void;
-  type?: string;
   placeholder?: string;
-  required?: boolean;
-  autoComplete?: string;
+  type?: string;
 }) {
   return (
-    <div>
-      <label className="text-sm font-bold text-[#0B2633]">
+    <label className="block">
+      <span className="mb-2 block text-xs font-black uppercase tracking-wide text-black/55">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#F700BA]">*</span>
+          <span className="ml-1 text-[#168DB8]">
+            *
+          </span>
         )}
-      </label>
+      </span>
 
       <input
         type={type}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
         placeholder={placeholder}
-        autoComplete={autoComplete}
-        className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-black/35 focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
+        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-[#0B2633] outline-none transition placeholder:text-black/25 focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10"
       />
-    </div>
+    </label>
   );
 }
 
 function SelectField({
   label,
+  required = false,
   value,
   onChange,
   options,
-  required = false,
+  placeholder,
 }: {
   label: string;
+  required?: boolean;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
-  required?: boolean;
+  options: Array<{
+    value: string;
+    label: string;
+  }>;
+  placeholder?: string;
 }) {
   return (
-    <div>
-      <label className="text-sm font-bold text-[#0B2633]">
+    <label className="block">
+      <span className="mb-2 block text-xs font-black uppercase tracking-wide text-black/55">
         {label}
+
         {required && (
-          <span className="ml-1 text-[#F700BA]">*</span>
+          <span className="ml-1 text-[#168DB8]">
+            *
+          </span>
         )}
-      </label>
+      </span>
 
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3.5 text-sm text-black/70 outline-none transition focus:border-[#168DB8] focus:ring-2 focus:ring-[#168DB8]/15"
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-sm text-[#0B2633] outline-none transition focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10"
       >
         <option value="">
-          Select {label.toLowerCase()}
+          {placeholder ?? "Select"}
         </option>
 
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
           </option>
         ))}
       </select>
-    </div>
+    </label>
   );
 }
 
-function SummaryCard({
-  label,
-  value,
-  dark = false,
-}: {
-  label: string;
-  value: string;
-  dark?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-2xl p-5 ${
-        dark
-          ? "bg-[#0B2633] text-white"
-          : "bg-[#F4FAFC] text-[#0B2633]"
-      }`}
-    >
-      <p
-        className={`text-xs font-black uppercase tracking-[0.16em] ${
-          dark ? "text-white/50" : "text-black/40"
-        }`}
-      >
-        {label}
-      </p>
-
-      <p className="mt-2 text-xl font-black">{value}</p>
-    </div>
-  );
-}
-
-function ReviewSection({
+function ReviewCard({
   title,
-  items,
-  onEdit,
+  rows,
 }: {
   title: string;
-  items: [string, string][];
-  onEdit: () => void;
+  rows: ReviewRow[];
 }) {
   return (
-    <div className="rounded-2xl border border-black/10 p-5">
-      <div className="flex items-center justify-between gap-4">
-        <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#0B2633]">
-          {title}
-        </h3>
+    <div className="rounded-3xl border border-black/5 bg-white p-5 shadow-sm">
+      <p className="text-sm font-black text-[#0B2633]">
+        {title}
+      </p>
 
-        <button
-          type="button"
-          onClick={onEdit}
-          className="text-xs font-bold text-[#168DB8] transition hover:text-[#11799D]"
-        >
-          Edit
-        </button>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {items.map(([label, value]) => (
-          <div key={label}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-black/35">
+      <div className="mt-4 divide-y divide-black/5">
+        {rows.map(([label, value]) => (
+          <div
+            key={`${title}-${label}`}
+            className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
+          >
+            <span className="text-xs font-semibold text-black/40">
               {label}
-            </p>
+            </span>
 
-            <p className="mt-1 text-sm font-semibold text-[#0B2633]">
+            <span className="text-right text-xs font-bold text-[#0B2633]">
               {value}
-            </p>
+            </span>
           </div>
         ))}
       </div>
@@ -1103,98 +1730,22 @@ function ReviewSection({
   );
 }
 
-function PaymentMethod({
-  title,
-  description,
-  selected,
-  onClick,
-  pink = false,
-}: {
-  title: string;
-  description: string;
-  selected: boolean;
-  onClick: () => void;
-  pink?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-2xl border p-5 text-left transition ${
-        selected
-          ? pink
-            ? "border-[#F700BA] bg-[#FFF4FB]"
-            : "border-[#168DB8] bg-[#F4FAFC]"
-          : "border-black/10 bg-white hover:bg-[#F4FAFC]"
-      }`}
-    >
-      <span className="block text-sm font-black text-[#0B2633]">
-        {title}
-      </span>
-
-      <span className="mt-2 block text-xs leading-5 text-black/50">
-        {description}
-      </span>
-    </button>
-  );
-}
-
-function PaymentRow({
+function StatusCard({
   label,
   value,
-  strong = false,
 }: {
   label: string;
   value: string;
-  strong?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <span
-        className={
-          strong
-            ? "text-sm font-black text-white"
-            : "text-sm text-white/60"
-        }
-      >
+    <div className="rounded-3xl border border-black/5 bg-white p-5 shadow-sm">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/35">
         {label}
-      </span>
+      </p>
 
-      <span
-        className={
-          strong
-            ? "text-sm font-black text-white"
-            : "text-sm font-semibold text-white"
-        }
-      >
+      <p className="mt-2 text-lg font-black text-[#0B2633]">
         {value}
-      </span>
-    </div>
-  );
-}
-
-function SummaryLine({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  last?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 ${
-        last ? "" : "border-b border-black/10 pb-3"
-      } ${last ? "" : "mb-3"}`}
-    >
-      <span className="text-sm text-black/55">
-        {label}
-      </span>
-
-      <span className="text-sm font-bold text-[#0B2633]">
-        {value}
-      </span>
+      </p>
     </div>
   );
 }

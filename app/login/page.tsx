@@ -28,6 +28,70 @@ type MembershipPaymentStatus =
   | "PAID"
   | "DUE";
 
+type ActivationLookupResponse = {
+  exists: boolean;
+  eligible: boolean;
+  code:
+    | "ELIGIBLE"
+    | "ALREADY_ACTIVE"
+    | "ACTIVATION_NOT_AVAILABLE";
+  message: string;
+  activationToken?: string;
+  activationExpiresAt?: string;
+  member: {
+    id: string;
+    memberNumber: string;
+    category: string;
+    registrationNumber: string | null;
+    admissionNumber: string | null;
+    activationStatus: string;
+  };
+};
+
+type ActivationVerificationResponse = {
+  verified: boolean;
+  code:
+    | "VERIFIED"
+    | "ALREADY_ACTIVE";
+  message: string;
+  member: {
+    id: string;
+    memberNumber: string;
+    category: string;
+    activationStatus: string;
+  };
+};
+
+type ActivationResponse = {
+  success?: boolean;
+  message: string;
+  member?: {
+    id: string;
+    memberNumber: string;
+    category: string;
+    activationStatus: string;
+  };
+  user?: {
+    id: string;
+    status: string;
+  };
+};
+
+type ApiErrorResponse = {
+  message?:
+    | string
+    | string[]
+    | Record<string, unknown>;
+  error?: string;
+  code?: string;
+};
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(
+    /\/+$/,
+    "",
+  ) ?? "http://localhost:3001";
+
 const activationSteps = [
   {
     number: 1,
@@ -51,40 +115,127 @@ const activationSteps = [
   },
 ] as const;
 
+function mapErrorCode(code: string) {
+  switch (code) {
+    case "MEMBER_NOT_FOUND":
+      return "No matching KUHRSA membership record was found. Check the identifier, email address and phone number.";
+
+    case "MEMBER_ACCOUNT_NOT_LINKED":
+      return "This KUHRSA membership has not yet been linked to a user account.";
+
+    case "ALREADY_ACTIVE":
+      return "Your KUHRSA account is already active. Please use the Login option.";
+
+    case "VERIFICATION_FAILED":
+      return "The details provided do not match the KUHRSA membership record.";
+
+    case "ACTIVATION_NOT_AVAILABLE":
+      return "This KUHRSA membership is not currently eligible for activation.";
+
+    default:
+      return "We could not complete the request. Please check your details and try again.";
+  }
+}
+
+function getErrorMessage(
+  payload: ApiErrorResponse,
+) {
+  if (
+    payload &&
+    typeof payload.message === "object" &&
+    !Array.isArray(payload.message)
+  ) {
+    const nestedMessage =
+      typeof payload.message.message ===
+      "string"
+        ? payload.message.message
+        : undefined;
+
+    const nestedCode =
+      typeof payload.message.code ===
+      "string"
+        ? payload.message.code
+        : undefined;
+
+    if (nestedCode) {
+      return mapErrorCode(
+        nestedCode,
+      );
+    }
+
+    if (nestedMessage) {
+      return nestedMessage;
+    }
+  }
+
+  if (
+    typeof payload.code ===
+    "string"
+  ) {
+    return mapErrorCode(
+      payload.code,
+    );
+  }
+
+  if (Array.isArray(payload.message)) {
+    return payload.message.join(
+      " ",
+    );
+  }
+
+  if (
+    typeof payload.message ===
+    "string"
+  ) {
+    return payload.message;
+  }
+
+  if (
+    typeof payload.error ===
+    "string"
+  ) {
+    return payload.error;
+  }
+
+  return "We could not complete the request. Please check your details and try again.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
   const [mode, setMode] =
     useState<AccessMode>("login");
 
-  const [loginIdentifier, setLoginIdentifier] =
-    useState("");
+  const [
+    loginIdentifier,
+    setLoginIdentifier,
+  ] = useState("");
 
-  const [loginPassword, setLoginPassword] =
-    useState("");
+  const [
+    loginPassword,
+    setLoginPassword,
+  ] = useState("");
 
-  const [loginError, setLoginError] =
-    useState("");
+  const [
+    loginError,
+    setLoginError,
+  ] = useState("");
 
-  const [loginLoading, setLoginLoading] =
-    useState(false);
+  const [
+    loginLoading,
+    setLoginLoading,
+  ] = useState(false);
 
-  const [activationStep, setActivationStep] =
-    useState<ActivationStep>(1);
+  const [
+    activationStep,
+    setActivationStep,
+  ] = useState<ActivationStep>(1);
 
-  const [activationError, setActivationError] =
-    useState("");
+  const [
+    activationError,
+    setActivationError,
+  ] = useState("");
 
-  /*
-   * Frontend-only placeholder for the future backend result.
-   *
-   * The membership activation backend will eventually determine:
-   * - whether the member exists
-   * - whether the record is migrated
-   * - whether the account is already activated
-   * - whether membership is already paid
-   * - the exact amount due
-   */
   const [
     membershipPaymentStatus,
     setMembershipPaymentStatus,
@@ -92,6 +243,32 @@ export default function LoginPage() {
     useState<MembershipPaymentStatus>(
       "DUE",
     );
+
+  const [
+    activationToken,
+    setActivationToken,
+  ] = useState("");
+
+  const [
+    activationRecord,
+    setActivationRecord,
+  ] =
+    useState<ActivationLookupResponse | null>(
+      null,
+    );
+
+  const [
+    activationResult,
+    setActivationResult,
+  ] =
+    useState<ActivationResponse | null>(
+      null,
+    );
+
+  const [
+    activationLoading,
+    setActivationLoading,
+  ] = useState(false);
 
   const [activation, setActivation] =
     useState({
@@ -120,10 +297,12 @@ export default function LoginPage() {
     field: K,
     value: (typeof activation)[K],
   ) => {
-    setActivation((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    setActivation(
+      (current) => ({
+        ...current,
+        [field]: value,
+      }),
+    );
 
     setActivationError("");
   };
@@ -135,6 +314,10 @@ export default function LoginPage() {
     setActivationError("");
     setLoginError("");
     setActivationStep(1);
+    setActivationToken("");
+    setActivationRecord(null);
+    setActivationResult(null);
+    setMembershipPaymentStatus("DUE");
   };
 
   const handleMemberLogin = async (
@@ -162,19 +345,6 @@ export default function LoginPage() {
         loginPassword,
       );
 
-      /*
-       * The backend has authenticated the account and
-       * returned its current active roles.
-       *
-       * The landing workspace is selected from those
-       * roles rather than from the route used to log in.
-       *
-       * Member             → /dashboard
-       * Executive          → /executive/dashboard
-       * Administrator      → /administration/dashboard
-       * Super Administrator→ /administration/dashboard
-       * System Owner       → /administration/dashboard
-       */
       const hasPortalAccess =
         result.user.isSystemOwner ||
         result.user.roles.some(
@@ -194,7 +364,9 @@ export default function LoginPage() {
       }
 
       router.replace(
-        getLandingPath(result.user),
+        getLandingPath(
+          result.user,
+        ),
       );
     } catch (error) {
       setLoginError(
@@ -212,21 +384,36 @@ export default function LoginPage() {
   ) => {
     if (currentStep === 1) {
       if (
-        !activation.identifier ||
-        !activation.email ||
-        !activation.phone
+        !activation.identifier.trim() ||
+        !activation.email.trim() ||
+        !activation.phone.trim()
       ) {
         return "Enter your registration or membership number, email address and phone number.";
+      }
+
+      if (
+        !/^\S+@\S+\.\S+$/.test(
+          activation.email.trim(),
+        )
+      ) {
+        return "Please provide a valid email address.";
       }
     }
 
     if (currentStep === 2) {
       if (
-        !activation.firstName ||
-        !activation.lastName ||
-        !activation.admissionNumber
+        !activation.firstName.trim() ||
+        !activation.lastName.trim()
       ) {
-        return "Please confirm the required membership details.";
+        return "Please provide your first and last name.";
+      }
+
+      if (
+        activationRecord?.member
+          .admissionNumber &&
+        !activation.admissionNumber.trim()
+      ) {
+        return "Please confirm your admission number.";
       }
     }
 
@@ -268,7 +455,7 @@ export default function LoginPage() {
       if (
         activation.paymentMethod ===
           "M-Pesa" &&
-        !activation.mpesaNumber
+        !activation.mpesaNumber.trim()
       ) {
         return "Please enter the M-Pesa number to use for payment.";
       }
@@ -277,76 +464,473 @@ export default function LoginPage() {
     return "";
   };
 
-  const nextActivationStep = () => {
-    const error =
-      validateActivationStep(
-        activationStep,
-      );
+  const lookupMembership =
+    async () => {
+      const error =
+        validateActivationStep(1);
 
-    if (error) {
-      setActivationError(error);
-      return;
-    }
+      if (error) {
+        setActivationError(
+          error,
+        );
+        return false;
+      }
 
-    setActivationError("");
+      setActivationLoading(true);
+      setActivationError("");
+      setActivationRecord(null);
+      setActivationToken("");
+      setActivationResult(null);
 
-    if (
-      activationStep === 3 &&
-      membershipPaymentStatus ===
-        "PAID"
-    ) {
-      setActivationStep(5);
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/membership-activation/lookup`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                identifier:
+                  activation.identifier.trim(),
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+                email:
+                  activation.email
+                    .trim()
+                    .toLowerCase(),
 
-      return;
-    }
+                phone:
+                  activation.phone.trim(),
+              }),
+            },
+          );
 
-    if (activationStep < 5) {
-      setActivationStep(
-        (current) =>
-          (current +
-            1) as ActivationStep,
-      );
+        const payload =
+          (await response.json()) as
+            | ActivationLookupResponse
+            | ApiErrorResponse;
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
-  };
+        if (!response.ok) {
+          throw new Error(
+            getErrorMessage(
+              payload as ApiErrorResponse,
+            ),
+          );
+        }
 
-  const previousActivationStep = () => {
-    setActivationError("");
+        const result =
+          payload as ActivationLookupResponse;
 
-    if (activationStep > 1) {
-      setActivationStep(
-        (current) =>
-          (current -
-            1) as ActivationStep,
-      );
+        if (!result.exists) {
+          setActivationError(
+            "No matching KUHRSA membership record was found.",
+          );
+          return false;
+        }
 
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
-  };
+        if (
+          result.code ===
+          "ALREADY_ACTIVE"
+        ) {
+          setActivationError(
+            "Your KUHRSA account is already active. Please use the Login option.",
+          );
+          return false;
+        }
+
+        if (!result.eligible) {
+          setActivationError(
+            result.message ||
+              "This KUHRSA membership is not currently eligible for activation.",
+          );
+          return false;
+        }
+
+        if (
+          !result.activationToken
+        ) {
+          setActivationError(
+            "The KUHRSA activation request could not be initialized. Please try again.",
+          );
+          return false;
+        }
+
+        setActivationRecord(
+          result,
+        );
+
+        setActivationToken(
+          result.activationToken,
+        );
+
+        updateActivation(
+          "registrationNumber",
+          result.member
+            .registrationNumber ??
+            "",
+        );
+
+        updateActivation(
+          "membershipNumber",
+          result.member.memberNumber,
+        );
+
+        updateActivation(
+          "admissionNumber",
+          result.member
+            .admissionNumber ??
+            "",
+        );
+
+        return true;
+      } catch (error) {
+        setActivationError(
+          error instanceof Error
+            ? error.message
+            : "KUHRSA membership lookup could not be completed.",
+        );
+
+        return false;
+      } finally {
+        setActivationLoading(
+          false,
+        );
+      }
+    };
+
+  const verifyActivationDetails =
+    async () => {
+      const error =
+        validateActivationStep(2);
+
+      if (error) {
+        setActivationError(
+          error,
+        );
+        return false;
+      }
+
+      if (!activationToken) {
+        setActivationError(
+          "Your activation session is no longer valid. Please return to Step 1 and identify your membership again.",
+        );
+        return false;
+      }
+
+      setActivationLoading(true);
+      setActivationError("");
+
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/membership-activation/verify`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                token:
+                  activationToken,
+
+                memberNumber:
+                  activationRecord
+                    ?.member
+                    .memberNumber ??
+                  activation.membershipNumber,
+
+                firstName:
+                  activation.firstName.trim(),
+
+                lastName:
+                  activation.lastName.trim(),
+
+                email:
+                  activation.email
+                    .trim()
+                    .toLowerCase(),
+              }),
+            },
+          );
+
+        const payload =
+          (await response.json()) as
+            | ActivationVerificationResponse
+            | ApiErrorResponse;
+
+        if (!response.ok) {
+          throw new Error(
+            getErrorMessage(
+              payload as ApiErrorResponse,
+            ),
+          );
+        }
+
+        const result =
+          payload as ActivationVerificationResponse;
+
+        if (
+          result.code ===
+          "ALREADY_ACTIVE"
+        ) {
+          setActivationError(
+            "Your KUHRSA account is already active. Please use the Login option.",
+          );
+          return false;
+        }
+
+        if (!result.verified) {
+          setActivationError(
+            result.message ||
+              "Membership verification failed.",
+          );
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        setActivationError(
+          error instanceof Error
+            ? error.message
+            : "Membership verification could not be completed.",
+        );
+
+        return false;
+      } finally {
+        setActivationLoading(
+          false,
+        );
+      }
+    };
+
+  const activateMembership =
+    async () => {
+      const error =
+        validateActivationStep(3);
+
+      if (error) {
+        setActivationError(
+          error,
+        );
+        return false;
+      }
+
+      if (!activationToken) {
+        setActivationError(
+          "Your activation session is no longer valid. Please return to Step 1 and identify your membership again.",
+        );
+        return false;
+      }
+
+      if (!activationRecord) {
+        setActivationError(
+          "Your KUHRSA membership record could not be found in this activation session.",
+        );
+        return false;
+      }
+
+      setActivationLoading(true);
+      setActivationError("");
+
+      try {
+        const response =
+          await fetch(
+            `${API_BASE_URL}/membership-activation`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                token:
+                  activationToken,
+                password:
+                  activation.password,
+              }),
+            },
+          );
+
+        const payload =
+          (await response.json()) as
+            | ActivationResponse
+            | ApiErrorResponse;
+
+        if (!response.ok) {
+          throw new Error(
+            getErrorMessage(
+              payload as ApiErrorResponse,
+            ),
+          );
+        }
+
+        const result =
+          payload as ActivationResponse;
+
+        setActivationResult(
+          result,
+        );
+
+        return true;
+      } catch (error) {
+        setActivationError(
+          error instanceof Error
+            ? error.message
+            : "Your KUHRSA account could not be activated.",
+        );
+
+        return false;
+      } finally {
+        setActivationLoading(
+          false,
+        );
+      }
+    };
+
+  const nextActivationStep =
+    async () => {
+      const error =
+        validateActivationStep(
+          activationStep,
+        );
+
+      if (error) {
+        setActivationError(
+          error,
+        );
+        return;
+      }
+
+      setActivationError("");
+
+      if (
+        activationStep === 1
+      ) {
+        const lookedUp =
+          await lookupMembership();
+
+        if (!lookedUp) {
+          return;
+        }
+
+        setActivationStep(2);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      if (
+        activationStep === 2
+      ) {
+        const verified =
+          await verifyActivationDetails();
+
+        if (!verified) {
+          return;
+        }
+
+        setActivationStep(3);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      if (
+        activationStep === 3
+      ) {
+        if (activationResult) {
+          setActivationStep(4);
+
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+
+          return;
+        }
+
+        const activated =
+          await activateMembership();
+
+        if (!activated) {
+          return;
+        }
+
+        setActivationStep(4);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      if (
+        activationStep === 4
+      ) {
+        completeActivation();
+        return;
+      }
+    };
+
+  const previousActivationStep =
+    () => {
+      setActivationError("");
+
+      if (
+        activationStep > 1
+      ) {
+        setActivationStep(
+          (current) =>
+            (current -
+              1) as ActivationStep,
+        );
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    };
 
   const completeActivation = () => {
+    if (!activationResult) {
+      setActivationError(
+        "Your KUHRSA account has not been activated by the system yet.",
+      );
+      return;
+    }
+
     const error =
       validateActivationStep(4);
 
     if (error) {
-      setActivationError(error);
+      setActivationError(
+        error,
+      );
       return;
     }
 
+    /*
+     * Payment remains a frontend placeholder
+     * until Finance / M-Pesa integration is implemented.
+     */
     setActivationError("");
-    setMembershipPaymentStatus("PAID");
+    setMembershipPaymentStatus(
+      "PAID",
+    );
     setActivationStep(5);
 
     window.scrollTo({
@@ -355,28 +939,29 @@ export default function LoginPage() {
     });
   };
 
-  const fullName = useMemo(
-    () =>
+  const fullName =
+    useMemo(
+      () =>
+        [
+          activation.firstName,
+          activation.lastName,
+        ]
+          .filter(Boolean)
+          .join(" "),
       [
         activation.firstName,
         activation.lastName,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    [
-      activation.firstName,
-      activation.lastName,
-    ],
-  );
+      ],
+    );
 
   const paymentRequired =
-    membershipPaymentStatus === "DUE";
+    membershipPaymentStatus ===
+    "DUE";
 
   return (
     <main className="min-h-screen bg-[#F4FAFC] px-5 py-12 sm:py-16">
       <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl items-center justify-center">
         <div className="grid w-full overflow-hidden rounded-[2rem] bg-white shadow-xl ring-1 ring-black/5 lg:grid-cols-[0.85fr_1.15fr]">
-          {/* Brand Panel */}
           <section
             className={`relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between ${
               mode === "login"
@@ -432,7 +1017,7 @@ export default function LoginPage() {
                 <p className="mt-5 leading-7 text-white/80">
                   {mode === "login"
                     ? "Sign in using your email address or registration number to access your KUHRSA member account."
-                    : "Verify your migrated membership record, create your account and complete any membership payment required before activation."}
+                    : "Verify your existing KUHRSA membership record, create your account and complete any membership payment required before activation."}
                 </p>
               </div>
             </div>
@@ -442,9 +1027,7 @@ export default function LoginPage() {
             </p>
           </section>
 
-          {/* Access Panel */}
           <section className="p-6 sm:p-10 lg:p-12">
-            {/* Mobile Brand */}
             <div className="mb-8 flex items-center lg:hidden">
               <Link
                 href="/"
@@ -501,11 +1084,10 @@ export default function LoginPage() {
                 {mode === "login"
                   ? "Sign in to access your KUHRSA member account."
                   : activationStep === 5
-                    ? "Your migrated membership activation process has been completed."
+                    ? "Your KUHRSA membership activation process has been completed."
                     : "Use your existing KUHRSA membership details to activate access to the new Member Portal."}
               </p>
 
-              {/* Mode Switcher */}
               <div className="mt-8 grid grid-cols-2 rounded-full bg-[#F4FAFC] p-1">
                 <button
                   type="button"
@@ -536,7 +1118,6 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* Login */}
               {mode === "login" && (
                 <>
                   <form
@@ -562,9 +1143,12 @@ export default function LoginPage() {
                         value={
                           loginIdentifier
                         }
-                        onChange={(event) =>
+                        onChange={(
+                          event,
+                        ) =>
                           setLoginIdentifier(
-                            event.target.value,
+                            event.target
+                              .value,
                           )
                         }
                         disabled={
@@ -591,9 +1175,12 @@ export default function LoginPage() {
                         value={
                           loginPassword
                         }
-                        onChange={(event) =>
+                        onChange={(
+                          event,
+                        ) =>
                           setLoginPassword(
-                            event.target.value,
+                            event.target
+                              .value,
                           )
                         }
                         disabled={
@@ -614,11 +1201,7 @@ export default function LoginPage() {
                       disabled={
                         loginLoading
                       }
-                      className={`mt-1 rounded-full bg-[#168DB8] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D] ${
-                        loginLoading
-                          ? "cursor-not-allowed opacity-60"
-                          : ""
-                      }`}
+                      className="mt-1 rounded-full bg-[#168DB8] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#11799D] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {loginLoading
                         ? "Signing In..."
@@ -650,10 +1233,8 @@ export default function LoginPage() {
                 </>
               )}
 
-              {/* Activation */}
               {mode === "activate" && (
                 <>
-                  {/* Activation Progress */}
                   {activationStep < 5 && (
                     <div className="mt-7">
                       <div className="flex items-center gap-2">
@@ -695,7 +1276,6 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Step 1 */}
                   {activationStep ===
                     1 && (
                     <div className="mt-8">
@@ -708,9 +1288,9 @@ export default function LoginPage() {
                       </h2>
 
                       <p className="mt-3 text-sm leading-6 text-black/55">
-                        Enter either your registration number or membership
-                        number, together with the email address and phone
-                        number associated with your KUHRSA record.
+                        Enter the registration or membership number,
+                        together with the email address and phone number
+                        already associated with your KUHRSA membership.
                       </p>
 
                       <div className="mt-6 grid gap-5">
@@ -761,7 +1341,6 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Step 2 */}
                   {activationStep ===
                     2 && (
                     <div className="mt-8">
@@ -773,42 +1352,45 @@ export default function LoginPage() {
                         Verify your details.
                       </h2>
 
-                      <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
-                          Membership Record
-                        </p>
+                      {activationRecord && (
+                        <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
+                            Membership Record Found
+                          </p>
 
-                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                          <InfoItem
-                            label="Identifier"
-                            value={
-                              activation.identifier ||
-                              "Awaiting verification"
-                            }
-                          />
+                          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                            <InfoItem
+                              label="Member Number"
+                              value={
+                                activationRecord
+                                  .member
+                                  .memberNumber
+                              }
+                            />
 
-                          <InfoItem
-                            label="Email"
-                            value={
-                              activation.email ||
-                              "Awaiting verification"
-                            }
-                          />
+                            <InfoItem
+                              label="Category"
+                              value={
+                                activationRecord
+                                  .member
+                                  .category
+                              }
+                            />
 
-                          <InfoItem
-                            label="Phone"
-                            value={
-                              activation.phone ||
-                              "Awaiting verification"
-                            }
-                          />
+                            <InfoItem
+                              label="Identifier"
+                              value={
+                                activation.identifier
+                              }
+                            />
 
-                          <InfoItem
-                            label="Status"
-                            value="Migrated member record"
-                          />
+                            <InfoItem
+                              label="Status"
+                              value="Eligible for activation"
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="mt-6 grid gap-5 sm:grid-cols-2">
                         <Field
@@ -850,21 +1432,25 @@ export default function LoginPage() {
                               value,
                             )
                           }
-                          placeholder="Admission number"
+                          placeholder={
+                            activationRecord
+                              ?.member
+                              .admissionNumber ??
+                            "Admission number, if applicable"
+                          }
                         />
                       </div>
 
-                      <div className="mt-6 rounded-2xl border border-black/10 p-4">
+                      <div className="mt-6 rounded-2xl border border-[#CE26A4]/10 bg-[#F9F4FC] p-4">
                         <p className="text-sm leading-6 text-black/55">
-                          In the connected system, these details will be
-                          matched against the migrated KUHRSA database before
-                          you are allowed to continue.
+                          KUHRSA has already found your membership record.
+                          The details entered here will now be matched against
+                          the record before account creation is allowed.
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Step 3 */}
                   {activationStep ===
                     3 && (
                     <div className="mt-8">
@@ -877,8 +1463,9 @@ export default function LoginPage() {
                       </h2>
 
                       <p className="mt-3 text-sm leading-6 text-black/55">
-                        Create the credentials you will use to access the KUHRSA
-                        Member Portal.
+                        Your membership details have been verified.
+                        Create the password you will use to access
+                        the KUHRSA Member Portal.
                       </p>
 
                       <div className="mt-6 grid gap-5">
@@ -959,15 +1546,14 @@ export default function LoginPage() {
                         </p>
 
                         <p className="mt-2 text-sm leading-6 text-black/55">
-                          {paymentRequired
-                            ? "The system has identified a membership amount that must be paid before activation can be completed."
-                            : "Your membership payment is already up to date. No additional payment is required."}
+                          {activationResult
+                            ? "Your KUHRSA account has been activated successfully by the system."
+                            : "Create your password and continue. KUHRSA will activate your account through the secure membership activation service."}
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Step 4 */}
                   {activationStep ===
                     4 && (
                     <div className="mt-8">
@@ -983,8 +1569,23 @@ export default function LoginPage() {
                         <>
                           <p className="mt-3 text-sm leading-6 text-black/55">
                             Complete the required membership payment before
-                            your activation can be completed.
+                            your activation process can be completed.
                           </p>
+
+                          {activationResult && (
+                            <div className="mt-6 rounded-2xl border border-green-100 bg-green-50 p-4">
+                              <p className="text-xs font-black uppercase tracking-[0.16em] text-green-700">
+                                Account Activation
+                              </p>
+
+                              <p className="mt-2 text-sm leading-6 text-green-800">
+                                Your KUHRSA account has been activated
+                                successfully. The payment section below is
+                                still using the development placeholder until
+                                Finance and M-Pesa integration is connected.
+                              </p>
+                            </div>
+                          )}
 
                           <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
                             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
@@ -1042,7 +1643,6 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Step 5 */}
                   {activationStep ===
                     5 && (
                     <div className="mt-8">
@@ -1062,9 +1662,25 @@ export default function LoginPage() {
                         </h2>
 
                         <p className="mt-3 text-sm leading-6 text-black/55">
-                          Your migrated membership activation process has been
-                          completed.
+                          Your KUHRSA account has been activated successfully.
                         </p>
+
+                        {activationResult?.member
+                          ?.memberNumber && (
+                          <div className="mt-5 rounded-2xl bg-white p-4 text-left ring-1 ring-black/5">
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-black/35">
+                              KUHRSA Member Number
+                            </p>
+
+                            <p className="mt-1 text-lg font-black text-[#0B2633]">
+                              {
+                                activationResult
+                                  .member
+                                  .memberNumber
+                              }
+                            </p>
+                          </div>
+                        )}
 
                         <Link
                           href="/dashboard"
@@ -1076,14 +1692,12 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {/* Activation Error */}
                   {activationError && (
                     <div className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700 ring-1 ring-red-100">
                       {activationError}
                     </div>
                   )}
 
-                  {/* Activation Controls */}
                   {activationStep < 5 && (
                     <div className="mt-8 flex items-center justify-between gap-4">
                       <button
@@ -1093,35 +1707,44 @@ export default function LoginPage() {
                         }
                         disabled={
                           activationStep ===
-                          1
+                            1 ||
+                          activationLoading
                         }
                         className="rounded-full border border-black/10 px-5 py-3 text-sm font-bold text-[#0B2633] transition hover:bg-black/[0.03] disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Back
                       </button>
 
-                      {activationStep ===
-                      4 ? (
-                        <button
-                          type="button"
-                          onClick={
-                            completeActivation
-                          }
-                          className="rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
-                        >
-                          Complete Activation
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={
-                            nextActivationStep
-                          }
-                          className="rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4]"
-                        >
-                          Continue
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={
+                          nextActivationStep
+                        }
+                        disabled={
+                          activationLoading
+                        }
+                        className="rounded-full bg-[#F700BA] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#CE26A4] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {activationLoading
+                          ? activationStep ===
+                            1
+                            ? "Checking Membership..."
+                            : activationStep ===
+                                2
+                              ? "Verifying..."
+                              : activationStep ===
+                                  3
+                                ? "Activating Account..."
+                                : "Completing..."
+                          : activationStep ===
+                              3 &&
+                            !activationResult
+                            ? "Create Account"
+                            : activationStep ===
+                                4
+                              ? "Complete Activation"
+                              : "Continue"}
+                      </button>
                     </div>
                   )}
                 </>
@@ -1143,7 +1766,9 @@ function Field({
 }: {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (
+    value: string,
+  ) => void;
   placeholder: string;
   type?: string;
 }) {
