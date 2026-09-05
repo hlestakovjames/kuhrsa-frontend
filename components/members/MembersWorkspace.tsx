@@ -77,6 +77,8 @@ type Member = {
 
   user: {
     id: string;
+    firstName: string | null;
+    lastName: string | null;
     email: string;
     status: string;
     isSystemOwner: boolean;
@@ -113,6 +115,7 @@ type MigrationBatch = {
   id: string;
   fileName: string;
   source: MemberSource;
+
   status:
     | "UPLOADED"
     | "VALIDATING"
@@ -134,6 +137,7 @@ type MigrationBatch = {
 type MigrationRow = {
   id: string;
   rowNumber: number;
+
   status:
     | "PENDING"
     | "VALID"
@@ -171,9 +175,10 @@ type MigrationRow = {
   errorMessage: string | null;
 };
 
-type MigrationBatchDetails = MigrationBatch & {
-  rows: MigrationRow[];
-};
+type MigrationBatchDetails =
+  MigrationBatch & {
+    rows: MigrationRow[];
+  };
 
 type MembersView =
   | "registry"
@@ -181,8 +186,8 @@ type MembersView =
 
 type PanelMode =
   | "none"
-  | "create"
   | "details"
+  | "create"
   | "edit";
 
 const API_URL =
@@ -250,6 +255,85 @@ function formatDate(value: string) {
   ).format(new Date(value));
 }
 
+function getMemberName(
+  member: Member,
+) {
+  const name = [
+    member.user?.firstName,
+    member.user?.lastName,
+  ]
+    .filter(
+      (
+        value,
+      ): value is string =>
+        Boolean(
+          value?.trim(),
+        ),
+    )
+    .join(" ")
+    .trim();
+
+  return name || "Name not available";
+}
+
+function getMemberInitials(
+  member: Member,
+) {
+  const first =
+    member.user?.firstName
+      ?.trim()
+      .charAt(0) ?? "";
+
+  const last =
+    member.user?.lastName
+      ?.trim()
+      .charAt(0) ?? "";
+
+  const initials =
+    `${first}${last}`.toUpperCase();
+
+  return initials || "KU";
+}
+
+function getAcademicSummary(
+  member: Member,
+) {
+  const items: string[] = [];
+
+  if (member.programme) {
+    items.push(member.programme);
+  }
+
+  if (
+    member.category ===
+    "STUDENT" &&
+    member.yearOfStudy
+  ) {
+    items.push(
+      `Year ${member.yearOfStudy}`,
+    );
+  }
+
+  if (
+    member.category ===
+    "ALUMNI" &&
+    member.graduationYear
+  ) {
+    items.push(
+      `Class of ${member.graduationYear}`,
+    );
+  }
+
+  if (member.position) {
+    items.push(member.position);
+  }
+
+  return (
+    items.join(" · ") ||
+    "Academic information not provided"
+  );
+}
+
 function statusClasses(
   status: MemberStatus,
 ) {
@@ -313,8 +397,6 @@ function migrationStatusClasses(
 ) {
   switch (status) {
     case "VALIDATED":
-      return "bg-emerald-50 text-emerald-700";
-
     case "COMPLETED":
       return "bg-emerald-50 text-emerald-700";
 
@@ -351,6 +433,7 @@ async function apiRequest<T>(
     `${API_URL}${path}`,
     {
       ...options,
+
       headers: {
         ...(options.body instanceof FormData
           ? {}
@@ -358,9 +441,12 @@ async function apiRequest<T>(
               "Content-Type":
                 "application/json",
             }),
+
         Authorization: `Bearer ${token}`,
+
         ...(options.headers ?? {}),
       },
+
       cache: "no-store",
     },
   );
@@ -411,6 +497,7 @@ async function downloadFile(
       headers: {
         Authorization: `Bearer ${token}`,
       },
+
       cache: "no-store",
     },
   );
@@ -429,7 +516,8 @@ async function downloadFile(
     );
   }
 
-  const blob = await response.blob();
+  const blob =
+    await response.blob();
 
   const disposition =
     response.headers.get(
@@ -445,19 +533,30 @@ async function downloadFile(
     match?.[1] ?? fallbackName;
 
   const url =
-    window.URL.createObjectURL(blob);
+    window.URL.createObjectURL(
+      blob,
+    );
 
   const anchor =
-    document.createElement("a");
+    document.createElement(
+      "a",
+    );
 
   anchor.href = url;
-  anchor.download = filename;
+  anchor.download =
+    filename;
 
-  document.body.appendChild(anchor);
+  document.body.appendChild(
+    anchor,
+  );
+
   anchor.click();
+
   anchor.remove();
 
-  window.URL.revokeObjectURL(url);
+  window.URL.revokeObjectURL(
+    url,
+  );
 }
 
 export default function MembersWorkspace() {
@@ -479,7 +578,9 @@ export default function MembersWorkspace() {
     useState("");
 
   const [view, setView] =
-    useState<MembersView>("registry");
+    useState<MembersView>(
+      "registry",
+    );
 
   const [search, setSearch] =
     useState("");
@@ -515,7 +616,9 @@ export default function MembersWorkspace() {
   const [
     selectedMember,
     setSelectedMember,
-  ] = useState<Member | null>(null);
+  ] = useState<Member | null>(
+    null,
+  );
 
   const [panelMode, setPanelMode] =
     useState<PanelMode>("none");
@@ -523,7 +626,9 @@ export default function MembersWorkspace() {
   const [
     editingMember,
     setEditingMember,
-  ] = useState<Member | null>(null);
+  ] = useState<Member | null>(
+    null,
+  );
 
   const [form, setForm] =
     useState<MemberForm>(
@@ -533,7 +638,9 @@ export default function MembersWorkspace() {
   const [
     migrationFile,
     setMigrationFile,
-  ] = useState<File | null>(null);
+  ] = useState<File | null>(
+    null,
+  );
 
   const [
     migrationBatch,
@@ -592,7 +699,7 @@ export default function MembersWorkspace() {
     }, [router]);
 
   useEffect(() => {
-    // Synchronize the workspace with the Members API.
+    // Synchronize component state with the external Members API.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadMembers();
   }, [loadMembers]);
@@ -604,8 +711,14 @@ export default function MembersWorkspace() {
 
       return members.filter(
         (member) => {
+          const name =
+            getMemberName(
+              member,
+            ).toLowerCase();
+
           const matchesSearch =
             !query ||
+            name.includes(query) ||
             member.memberNumber
               .toLowerCase()
               .includes(query) ||
@@ -616,13 +729,13 @@ export default function MembersWorkspace() {
               .toLowerCase()
               .includes(query) ||
             (
-              member.user?.email ??
+              member.email ??
               ""
             )
               .toLowerCase()
               .includes(query) ||
             (
-              member.email ??
+              member.user?.email ??
               ""
             )
               .toLowerCase()
@@ -635,6 +748,12 @@ export default function MembersWorkspace() {
               .includes(query) ||
             (
               member.staffNumber ??
+              ""
+            )
+              .toLowerCase()
+              .includes(query) ||
+            (
+              member.programme ??
               ""
             )
               .toLowerCase()
@@ -651,12 +770,14 @@ export default function MembersWorkspace() {
               statusFilter;
 
           const matchesActivation =
-            activationFilter === "ALL" ||
+            activationFilter ===
+              "ALL" ||
             member.activationStatus ===
               activationFilter;
 
           const matchesSource =
-            sourceFilter === "ALL" ||
+            sourceFilter ===
+              "ALL" ||
             member.source ===
               sourceFilter;
 
@@ -713,6 +834,13 @@ export default function MembersWorkspace() {
             "PENDING",
         ).length,
 
+      completedActivation:
+        members.filter(
+          (member) =>
+            member.activationStatus ===
+            "COMPLETED",
+        ).length,
+
       students: members.filter(
         (member) =>
           member.category ===
@@ -738,6 +866,14 @@ export default function MembersWorkspace() {
           member.source ===
             "MIGRATION_MANUAL",
       ).length,
+
+      linkedAccounts:
+        members.filter(
+          (member) =>
+            Boolean(
+              member.user,
+            ),
+        ).length,
     };
   }, [members]);
 
@@ -750,9 +886,11 @@ export default function MembersWorkspace() {
     clearMessages();
 
     setView("registry");
+
     setForm(
       EMPTY_FORM,
     );
+
     setEditingMember(null);
     setSelectedMember(null);
     setPanelMode("create");
@@ -763,27 +901,27 @@ export default function MembersWorkspace() {
   ) {
     clearMessages();
 
-    setView("registry");
     setSelectedMember(null);
     setEditingMember(member);
 
     setForm({
       category: member.category,
 
-      firstName: member.user
-        ? ""
-        : "",
+      firstName:
+        member.user?.firstName ??
+        "",
 
-      lastName: member.user
-        ? ""
-        : "",
+      lastName:
+        member.user?.lastName ??
+        "",
 
       registrationNumber:
         member.registrationNumber ??
         "",
 
       nationalId:
-        member.nationalId ?? "",
+        member.nationalId ??
+        "",
 
       graduationYear:
         member.graduationYear
@@ -800,19 +938,24 @@ export default function MembersWorkspace() {
           : "",
 
       programme:
-        member.programme ?? "",
+        member.programme ??
+        "",
 
       staffNumber:
-        member.staffNumber ?? "",
+        member.staffNumber ??
+        "",
 
       position:
-        member.position ?? "",
+        member.position ??
+        "",
 
       faculty:
-        member.faculty ?? "",
+        member.faculty ??
+        "",
 
       department:
-        member.department ?? "",
+        member.department ??
+        "",
 
       email:
         member.email ??
@@ -820,19 +963,22 @@ export default function MembersWorkspace() {
         "",
 
       phone:
-        member.phone ?? "",
+        member.phone ??
+        "",
 
       address:
-        member.address ?? "",
+        member.address ??
+        "",
 
       county:
-        member.county ?? "",
+        member.county ??
+        "",
     });
 
     setPanelMode("edit");
   }
 
-  function closePanels() {
+  function closePanel() {
     if (busy) {
       return;
     }
@@ -840,9 +986,7 @@ export default function MembersWorkspace() {
     setPanelMode("none");
     setSelectedMember(null);
     setEditingMember(null);
-    setForm(
-      EMPTY_FORM,
-    );
+    setForm(EMPTY_FORM);
   }
 
   async function openMember(
@@ -856,7 +1000,10 @@ export default function MembersWorkspace() {
           `/members/${member.id}`,
         );
 
-      setSelectedMember(details);
+      setSelectedMember(
+        details,
+      );
+
       setEditingMember(null);
       setPanelMode("details");
     } catch (requestError) {
@@ -907,14 +1054,13 @@ export default function MembersWorkspace() {
         return "Student registration/admission number is required.";
       }
 
-      if (!form.yearOfStudy) {
-        return "Student year of study is required.";
-      }
-
       const year =
-        Number(form.yearOfStudy);
+        Number(
+          form.yearOfStudy,
+        );
 
       if (
+        !form.yearOfStudy ||
         !Number.isInteger(
           year,
         ) ||
@@ -937,25 +1083,20 @@ export default function MembersWorkspace() {
         return "National ID is required for alumni.";
       }
 
-      if (!form.graduationYear) {
-        return "Graduation year is required for alumni.";
-      }
-
       const graduationYear =
         Number(
           form.graduationYear,
         );
 
-      const currentYear =
-        new Date().getFullYear();
-
       if (
+        !form.graduationYear ||
         !Number.isInteger(
           graduationYear,
         ) ||
-        graduationYear < 1900 ||
+        graduationYear <
+          1900 ||
         graduationYear >
-          currentYear
+          new Date().getFullYear()
       ) {
         return "Please provide a valid graduation year.";
       }
@@ -1120,24 +1261,22 @@ export default function MembersWorkspace() {
         ],
       );
 
-      setPanelMode(
-        "details",
-      );
-
       setSelectedMember(
         member,
       );
 
-      setEditingMember(
-        null,
-      );
+      setEditingMember(null);
 
       setForm(
         EMPTY_FORM,
       );
 
+      setPanelMode(
+        "details",
+      );
+
       setNotice(
-        `${member.memberNumber} was created successfully. The member account is pending activation.`,
+        `${member.memberNumber} was created successfully. The linked account is awaiting activation.`,
       );
     } catch (requestError) {
       setError(
@@ -1182,7 +1321,8 @@ export default function MembersWorkspace() {
       }
 
       if (email) {
-        payload.email = email;
+        payload.email =
+          email;
       }
 
       const updated =
@@ -1253,7 +1393,9 @@ export default function MembersWorkspace() {
           `/members/${member.id}/${action}`,
           {
             method: "POST",
-            body: JSON.stringify({}),
+            body: JSON.stringify(
+              {},
+            ),
           },
         );
 
@@ -1319,11 +1461,13 @@ export default function MembersWorkspace() {
       extension !== "xlsx" &&
       extension !== "csv"
     ) {
+      event.target.value = "";
       setMigrationFile(null);
+
       setError(
         "Only .xlsx and .csv migration files are supported.",
       );
-      event.target.value = "";
+
       return;
     }
 
@@ -1331,18 +1475,18 @@ export default function MembersWorkspace() {
       file.size >
       10 * 1024 * 1024
     ) {
+      event.target.value = "";
       setMigrationFile(null);
+
       setError(
         "Migration files cannot exceed 10 MB.",
       );
-      event.target.value = "";
+
       return;
     }
 
     setMigrationFile(file);
-    setMigrationBatch(
-      null,
-    );
+    setMigrationBatch(null);
   }
 
   async function uploadMigration() {
@@ -1350,12 +1494,14 @@ export default function MembersWorkspace() {
       setError(
         "Select a .xlsx or .csv migration file first.",
       );
+
       return;
     }
 
     setMigrationLoading(
       true,
     );
+
     clearMessages();
 
     try {
@@ -1412,6 +1558,7 @@ export default function MembersWorkspace() {
     setMigrationLoading(
       true,
     );
+
     clearMessages();
 
     try {
@@ -1448,12 +1595,14 @@ export default function MembersWorkspace() {
       setError(
         "Only a fully validated migration batch can be imported.",
       );
+
       return;
     }
 
     setMigrationImporting(
       true,
     );
+
     clearMessages();
 
     try {
@@ -1547,7 +1696,9 @@ export default function MembersWorkspace() {
         return [];
       }
 
-      if (!migrationErrorOnly) {
+      if (
+        !migrationErrorOnly
+      ) {
         return migrationBatch.rows;
       }
 
@@ -1565,7 +1716,6 @@ export default function MembersWorkspace() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-      {/* Header */}
       <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
@@ -1577,10 +1727,10 @@ export default function MembersWorkspace() {
           </h1>
 
           <p className="mt-3 max-w-4xl text-sm leading-7 text-black/55 sm:text-base">
-            Manage the complete KUHRSA membership
-            registry, create individual member
-            records, and migrate existing membership
-            data in controlled batches.
+            Manage complete KUHRSA membership records,
+            member accounts, lifecycle status and
+            controlled data migration from one
+            administration workspace.
           </p>
         </div>
 
@@ -1588,9 +1738,9 @@ export default function MembersWorkspace() {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#168DB8] px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-[#168DB8]/20 transition hover:bg-[#11799D]"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#168DB8] px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-[#168DB8]/20 transition hover:bg-[#11799D]"
           >
-            <span className="text-lg leading-none">
+            <span className="text-lg">
               +
             </span>
 
@@ -1600,18 +1750,21 @@ export default function MembersWorkspace() {
           <button
             type="button"
             onClick={() =>
-              setView("migration")
+              setView(
+                "migration",
+              )
             }
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#168DB8]/20 bg-[#168DB8]/5 px-5 py-3.5 text-sm font-black text-[#168DB8] transition hover:bg-[#168DB8]/10"
+            className="inline-flex items-center gap-2 rounded-2xl border border-[#168DB8]/20 bg-[#168DB8]/5 px-5 py-3.5 text-sm font-black text-[#168DB8] transition hover:bg-[#168DB8]/10"
           >
-            <span>↥</span>
+            <span className="text-lg">
+              ↑
+            </span>
 
             Bulk Migration
           </button>
         </div>
       </div>
 
-      {/* Messages */}
       {(error || notice) && (
         <div className="mt-6">
           {error && (
@@ -1628,14 +1781,15 @@ export default function MembersWorkspace() {
         </div>
       )}
 
-      {/* Workspace switch */}
       <div className="mt-7 flex gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-sm ring-1 ring-black/5">
         <WorkspaceTab
           active={
             view === "registry"
           }
           onClick={() =>
-            setView("registry")
+            setView(
+              "registry",
+            )
           }
           label="Member Registry"
           count={members.length}
@@ -1646,7 +1800,9 @@ export default function MembersWorkspace() {
             view === "migration"
           }
           onClick={() =>
-            setView("migration")
+            setView(
+              "migration",
+            )
           }
           label="Bulk Migration"
         />
@@ -1654,501 +1810,325 @@ export default function MembersWorkspace() {
 
       {view === "registry" ? (
         <>
-          {/* Summary */}
           <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Total Members"
-              value={String(
-                stats.total,
-              )}
+              value={stats.total}
               detail="All membership records"
             />
 
             <StatCard
               label="Active"
-              value={String(
-                stats.active,
-              )}
+              value={stats.active}
               detail="Currently active members"
             />
 
             <StatCard
-              label="Pending"
-              value={String(
-                stats.pending,
-              )}
-              detail="Awaiting administration action"
+              label="Activation Pending"
+              value={
+                stats.activationPending
+              }
+              detail="Accounts awaiting activation"
             />
 
             <StatCard
-              label="Activation Pending"
-              value={String(
-                stats.activationPending,
-              )}
-              detail="Accounts awaiting member activation"
+              label="Linked Accounts"
+              value={
+                stats.linkedAccounts
+              }
+              detail="Members with system accounts"
             />
           </section>
 
-          {/* Category summary */}
           <section className="mt-6 grid gap-4 sm:grid-cols-3">
             <CategoryCard
               label="Students"
-              value={stats.students}
-              description="Student membership records"
+              value={
+                stats.students
+              }
+              description="Current university students"
             />
 
             <CategoryCard
               label="Alumni"
-              value={stats.alumni}
-              description="Alumni membership records"
+              value={
+                stats.alumni
+              }
+              description="Former university students"
             />
 
             <CategoryCard
               label="Lecturers"
-              value={stats.lecturers}
-              description="Lecturer membership records"
+              value={
+                stats.lecturers
+              }
+              description="Academic staff members"
             />
           </section>
 
-          {/* Registry */}
-          <section className="mt-6 overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-black/5">
-            <div className="border-b border-black/5 p-5 sm:p-6">
-              <div className="flex flex-col gap-5">
-                <div className="flex flex-col gap-1 lg:flex-row lg:items-end lg:justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#168DB8]">
-                      Member Registry
-                    </p>
+          <section className="mt-6 rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#168DB8]">
+                    Member Registry
+                  </p>
 
-                    <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
-                      All KUHRSA Members
-                    </h2>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight text-[#0B2633]">
+                    KUHRSA Membership Records
+                  </h2>
 
-                    <p className="mt-1 text-sm text-black/45">
-                      {filteredMembers.length} of{" "}
-                      {members.length} records shown
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void loadMembers()
-                      }
-                      disabled={loading}
-                      className="rounded-xl border border-black/10 px-4 py-2.5 text-xs font-black text-[#0B2633] hover:bg-black/[0.03] disabled:opacity-50"
-                    >
-                      {loading
-                        ? "Refreshing..."
-                        : "Refresh"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={openCreate}
-                      className="rounded-xl bg-[#168DB8] px-4 py-2.5 text-xs font-black text-white hover:bg-[#11799D]"
-                    >
-                      + Add Member
-                    </button>
-                  </div>
+                  <p className="mt-1 text-sm text-black/45">
+                    {filteredMembers.length} of{" "}
+                    {members.length} records shown
+                  </p>
                 </div>
 
-                <div className="grid gap-3 lg:grid-cols-[minmax(280px,1.7fr)_repeat(4,minmax(150px,1fr))]">
-                  <input
-                    value={search}
-                    onChange={(
-                      event,
-                    ) =>
-                      setSearch(
-                        event.target
-                          .value,
-                      )
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void loadMembers()
                     }
-                    placeholder="Search member number, identifier, email, phone or staff number"
-                    className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-medium text-[#0B2633] outline-none placeholder:text-black/30 focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10"
-                  />
-
-                  <select
-                    value={
-                      categoryFilter
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setCategoryFilter(
-                        event.target
-                          .value as
-                          | "ALL"
-                          | MemberCategory,
-                      )
-                    }
-                    className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                    disabled={loading}
+                    className="rounded-xl border border-black/10 px-4 py-2.5 text-xs font-black text-[#0B2633] hover:bg-black/[0.03] disabled:opacity-50"
                   >
-                    <option value="ALL">
-                      All Categories
-                    </option>
+                    {loading
+                      ? "Refreshing..."
+                      : "Refresh"}
+                  </button>
 
-                    <option value="STUDENT">
-                      Students
-                    </option>
-
-                    <option value="ALUMNI">
-                      Alumni
-                    </option>
-
-                    <option value="LECTURER">
-                      Lecturers
-                    </option>
-                  </select>
-
-                  <select
-                    value={
-                      statusFilter
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setStatusFilter(
-                        event.target
-                          .value as
-                          | "ALL"
-                          | MemberStatus,
-                      )
-                    }
-                    className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                  <button
+                    type="button"
+                    onClick={openCreate}
+                    className="rounded-xl bg-[#168DB8] px-4 py-2.5 text-xs font-black text-white hover:bg-[#11799D]"
                   >
-                    <option value="ALL">
-                      All Statuses
-                    </option>
-
-                    <option value="PENDING">
-                      Pending
-                    </option>
-
-                    <option value="ACTIVE">
-                      Active
-                    </option>
-
-                    <option value="INACTIVE">
-                      Inactive
-                    </option>
-
-                    <option value="SUSPENDED">
-                      Suspended
-                    </option>
-
-                    <option value="ARCHIVED">
-                      Archived
-                    </option>
-                  </select>
-
-                  <select
-                    value={
-                      activationFilter
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setActivationFilter(
-                        event.target
-                          .value as
-                          | "ALL"
-                          | MemberActivationStatus,
-                      )
-                    }
-                    className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
-                  >
-                    <option value="ALL">
-                      All Activation
-                    </option>
-
-                    <option value="PENDING">
-                      Pending
-                    </option>
-
-                    <option value="COMPLETED">
-                      Completed
-                    </option>
-
-                    <option value="EXPIRED">
-                      Expired
-                    </option>
-
-                    <option value="NOT_REQUIRED">
-                      Not Required
-                    </option>
-                  </select>
-
-                  <select
-                    value={
-                      sourceFilter
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setSourceFilter(
-                        event.target
-                          .value as
-                          | "ALL"
-                          | MemberSource,
-                      )
-                    }
-                    className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
-                  >
-                    <option value="ALL">
-                      All Sources
-                    </option>
-
-                    <option value="REGISTRATION">
-                      Registration
-                    </option>
-
-                    <option value="MIGRATION_IMPORT">
-                      Bulk Migration
-                    </option>
-
-                    <option value="MIGRATION_MANUAL">
-                      Manual Entry
-                    </option>
-                  </select>
+                    + Add Member
+                  </button>
                 </div>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-[minmax(280px,1.8fr)_repeat(4,minmax(145px,1fr))]">
+                <input
+                  value={search}
+                  onChange={(
+                    event,
+                  ) =>
+                    setSearch(
+                      event.target
+                        .value,
+                    )
+                  }
+                  placeholder="Search name, member number, identifier, email, phone, programme..."
+                  className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-medium text-[#0B2633] outline-none placeholder:text-black/30 focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10"
+                />
+
+                <select
+                  value={
+                    categoryFilter
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setCategoryFilter(
+                      event.target
+                        .value as
+                        | "ALL"
+                        | MemberCategory,
+                    )
+                  }
+                  className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                >
+                  <option value="ALL">
+                    All Categories
+                  </option>
+
+                  <option value="STUDENT">
+                    Students
+                  </option>
+
+                  <option value="ALUMNI">
+                    Alumni
+                  </option>
+
+                  <option value="LECTURER">
+                    Lecturers
+                  </option>
+                </select>
+
+                <select
+                  value={
+                    statusFilter
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setStatusFilter(
+                      event.target
+                        .value as
+                        | "ALL"
+                        | MemberStatus,
+                    )
+                  }
+                  className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                >
+                  <option value="ALL">
+                    All Statuses
+                  </option>
+
+                  <option value="PENDING">
+                    Pending
+                  </option>
+
+                  <option value="ACTIVE">
+                    Active
+                  </option>
+
+                  <option value="INACTIVE">
+                    Inactive
+                  </option>
+
+                  <option value="SUSPENDED">
+                    Suspended
+                  </option>
+
+                  <option value="ARCHIVED">
+                    Archived
+                  </option>
+                </select>
+
+                <select
+                  value={
+                    activationFilter
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setActivationFilter(
+                      event.target
+                        .value as
+                        | "ALL"
+                        | MemberActivationStatus,
+                    )
+                  }
+                  className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                >
+                  <option value="ALL">
+                    All Activation
+                  </option>
+
+                  <option value="PENDING">
+                    Pending
+                  </option>
+
+                  <option value="COMPLETED">
+                    Completed
+                  </option>
+
+                  <option value="EXPIRED">
+                    Expired
+                  </option>
+
+                  <option value="NOT_REQUIRED">
+                    Not Required
+                  </option>
+                </select>
+
+                <select
+                  value={
+                    sourceFilter
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setSourceFilter(
+                      event.target
+                        .value as
+                        | "ALL"
+                        | MemberSource,
+                    )
+                  }
+                  className="h-11 rounded-xl border border-black/10 bg-[#F8FBFC] px-4 text-sm font-bold text-[#0B2633] outline-none focus:border-[#168DB8]"
+                >
+                  <option value="ALL">
+                    All Sources
+                  </option>
+
+                  <option value="REGISTRATION">
+                    Registration
+                  </option>
+
+                  <option value="MIGRATION_IMPORT">
+                    Bulk Migration
+                  </option>
+
+                  <option value="MIGRATION_MANUAL">
+                    Manual Entry
+                  </option>
+                </select>
               </div>
             </div>
-
-            {loading ? (
-              <div className="p-6">
-                <div className="space-y-3">
-                  {Array.from({
-                    length: 7,
-                  }).map(
-                    (_, index) => (
-                      <div
-                        key={index}
-                        className="h-16 animate-pulse rounded-2xl bg-[#F4FAFC]"
-                      />
-                    ),
-                  )}
-                </div>
-              </div>
-            ) : filteredMembers.length ===
-              0 ? (
-              <div className="p-10 text-center sm:p-16">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F4FAFC] text-xl font-black text-[#168DB8]">
-                  M
-                </div>
-
-                <h3 className="mt-5 text-xl font-black text-[#0B2633]">
-                  No members found
-                </h3>
-
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-black/45">
-                  Change the search or filters, or
-                  create a new member record.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={openCreate}
-                  className="mt-6 rounded-full bg-[#168DB8] px-5 py-3 text-sm font-black text-white hover:bg-[#11799D]"
-                >
-                  Add Member
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1250px]">
-                  <thead>
-                    <tr className="border-b border-black/5 bg-[#F8FBFC] text-left">
-                      <TableHead>
-                        Member
-                      </TableHead>
-
-                      <TableHead>
-                        Category
-                      </TableHead>
-
-                      <TableHead>
-                        Identifier
-                      </TableHead>
-
-                      <TableHead>
-                        Contact
-                      </TableHead>
-
-                      <TableHead>
-                        Status
-                      </TableHead>
-
-                      <TableHead>
-                        Activation
-                      </TableHead>
-
-                      <TableHead>
-                        Source
-                      </TableHead>
-
-                      <TableHead align="right">
-                        Actions
-                      </TableHead>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {filteredMembers.map(
-                      (member) => (
-                        <tr
-                          key={
-                            member.id
-                          }
-                          className="border-b border-black/5 last:border-0 hover:bg-[#FBFDFE]"
-                        >
-                          <td className="px-5 py-5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void openMember(
-                                  member,
-                                )
-                              }
-                              className="text-left"
-                            >
-                              <p className="text-sm font-black text-[#0B2633]">
-                                {
-                                  member.memberNumber
-                                }
-                              </p>
-
-                              <p className="mt-1 text-xs font-semibold text-black/55">
-                                {[
-                                  member.user
-                                    ?.email,
-                                  member.email,
-                                ]
-                                  .filter(
-                                    Boolean,
-                                  )
-                                  .filter(
-                                    (
-                                      value,
-                                      index,
-                                      array,
-                                    ) =>
-                                      array.indexOf(
-                                        value,
-                                      ) ===
-                                      index,
-                                  )
-                                  .join(
-                                    " · ",
-                                  ) ||
-                                  "No contact email"}
-                              </p>
-                            </button>
-                          </td>
-
-                          <td className="px-5 py-5 text-sm font-bold text-black/65">
-                            {formatCategory(
-                              member.category,
-                            )}
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <p className="text-sm font-semibold text-black/70">
-                              {member.registrationNumber ??
-                                member.staffNumber ??
-                                "—"}
-                            </p>
-
-                            {member.category ===
-                              "ALUMNI" &&
-                              member.nationalId && (
-                                <p className="mt-1 text-[11px] font-semibold text-black/30">
-                                  National ID protected
-                                </p>
-                              )}
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <p className="text-sm font-semibold text-black/65">
-                              {
-                                member.phone
-                              }
-                            </p>
-
-                            <p className="mt-1 text-[11px] text-black/35">
-                              {member.county ??
-                                "No county"}
-                            </p>
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${statusClasses(
-                                member.status,
-                              )}`}
-                            >
-                              {formatStatus(
-                                member.status,
-                              )}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1.5 text-[11px] font-black ${activationClasses(
-                                member.activationStatus,
-                              )}`}
-                            >
-                              {formatStatus(
-                                member.activationStatus,
-                              )}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-5 text-sm font-semibold text-black/50">
-                            {
-                              sourceLabel(
-                                member.source,
-                              )
-                            }
-                          </td>
-
-                          <td className="px-5 py-5">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void openMember(
-                                    member,
-                                  )
-                                }
-                                className="rounded-xl border border-black/10 px-3 py-2 text-xs font-black text-[#0B2633] hover:bg-black/[0.03]"
-                              >
-                                View
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openEdit(
-                                    member,
-                                  )
-                                }
-                                className="rounded-xl border border-[#168DB8]/20 bg-[#168DB8]/5 px-3 py-2 text-xs font-black text-[#168DB8] hover:bg-[#168DB8]/10"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ),
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </section>
+
+          {loading ? (
+            <section className="mt-6 grid gap-4 xl:grid-cols-2">
+              {Array.from({
+                length: 6,
+              }).map(
+                (_, index) => (
+                  <div
+                    key={index}
+                    className="h-72 animate-pulse rounded-[1.5rem] bg-white shadow-sm ring-1 ring-black/5"
+                  />
+                ),
+              )}
+            </section>
+          ) : filteredMembers.length ===
+            0 ? (
+            <section className="mt-6 rounded-[1.75rem] bg-white p-12 text-center shadow-sm ring-1 ring-black/5">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F4FAFC] text-xl font-black text-[#168DB8]">
+                M
+              </div>
+
+              <h3 className="mt-5 text-xl font-black text-[#0B2633]">
+                No members found
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-black/45">
+                No member records match the current
+                search and filters.
+              </p>
+
+              <button
+                type="button"
+                onClick={openCreate}
+                className="mt-6 rounded-full bg-[#168DB8] px-5 py-3 text-sm font-black text-white hover:bg-[#11799D]"
+              >
+                Add Member
+              </button>
+            </section>
+          ) : (
+            <section className="mt-6 grid gap-4 xl:grid-cols-2">
+              {filteredMembers.map(
+                (member) => (
+                  <MemberRecordCard
+                    key={member.id}
+                    member={member}
+                    onView={() =>
+                      void openMember(
+                        member,
+                      )
+                    }
+                    onEdit={() =>
+                      openEdit(
+                        member,
+                      )
+                    }
+                  />
+                ),
+              )}
+            </section>
+          )}
         </>
       ) : (
         <MigrationWorkspace
@@ -2202,10 +2182,9 @@ export default function MembersWorkspace() {
         />
       )}
 
-      {/* Member panel */}
       {panelMode !== "none" && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-[#0B2633]/55 backdrop-blur-sm sm:items-center">
-          <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-[2rem] bg-white shadow-2xl sm:mx-4 sm:max-w-4xl sm:rounded-[2rem]">
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-[#0B2633]/60 p-0 backdrop-blur-sm sm:items-center sm:p-5">
+          <div className="max-h-[95vh] w-full overflow-y-auto rounded-t-[2rem] bg-white shadow-2xl sm:max-w-5xl sm:rounded-[2rem]">
             {panelMode ===
               "details" &&
               selectedMember && (
@@ -2215,7 +2194,7 @@ export default function MembersWorkspace() {
                   }
                   busy={busy}
                   onClose={
-                    closePanels
+                    closePanel
                   }
                   onEdit={() =>
                     openEdit(
@@ -2254,7 +2233,7 @@ export default function MembersWorkspace() {
                 form={form}
                 busy={busy}
                 onClose={
-                  closePanels
+                  closePanel
                 }
                 onChange={
                   setForm
@@ -2317,7 +2296,7 @@ function StatCard({
   detail,
 }: {
   label: string;
-  value: string;
+  value: number;
   detail: string;
 }) {
   return (
@@ -2367,23 +2346,191 @@ function CategoryCard({
   );
 }
 
-function TableHead({
-  children,
-  align,
+function MemberRecordCard({
+  member,
+  onView,
+  onEdit,
 }: {
-  children: ReactNode;
-  align?: "right";
+  member: Member;
+  onView: () => void;
+  onEdit: () => void;
+}) {
+  const name =
+    getMemberName(
+      member,
+    );
+
+  const initials =
+    getMemberInitials(
+      member,
+    );
+
+  return (
+    <article className="overflow-hidden rounded-[1.5rem] bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="border-b border-black/5 p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#168DB8]/10 text-sm font-black text-[#168DB8]">
+              {initials}
+            </div>
+
+            <div className="min-w-0">
+              <p className="truncate text-lg font-black text-[#0B2633]">
+                {name}
+              </p>
+
+              <p className="mt-1 text-xs font-bold text-[#168DB8]">
+                {
+                  member.memberNumber
+                }
+              </p>
+
+              <p className="mt-1 text-xs text-black/40">
+                {formatCategory(
+                  member.category,
+                )}{" "}
+                ·{" "}
+                {getAcademicSummary(
+                  member,
+                )}
+              </p>
+            </div>
+          </div>
+
+          <span
+            className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black ring-1 ${statusClasses(
+              member.status,
+            )}`}
+          >
+            {formatStatus(
+              member.status,
+            )}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid divide-y divide-black/5 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <RecordBlock
+          label="Identification"
+          value={
+            member.registrationNumber ??
+            member.staffNumber ??
+            "Not provided"
+          }
+          detail={
+            member.category ===
+            "LECTURER"
+              ? "Staff / Employee Number"
+              : "Registration / Admission Number"
+          }
+        />
+
+        <RecordBlock
+          label="Contact"
+          value={
+            member.phone ??
+            "Phone not provided"
+          }
+          detail={
+            member.email ??
+            member.user?.email ??
+            "Email not provided"
+          }
+        />
+
+        <RecordBlock
+          label="Academic / Professional"
+          value={
+            member.faculty ??
+            "Faculty not provided"
+          }
+          detail={
+            member.department ??
+            member.position ??
+            "Department not provided"
+          }
+        />
+
+        <RecordBlock
+          label="Membership"
+          value={formatStatus(
+            member.activationStatus,
+          )}
+          detail={`Source: ${sourceLabel(
+            member.source,
+          )}`}
+          accent
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 bg-[#FBFDFE] px-5 py-4 sm:px-6">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/30">
+            Account
+          </p>
+
+          <p className="mt-1 text-xs font-bold text-[#0B2633]">
+            {member.user
+              ? `${formatStatus(
+                  member.user.status,
+                )} · Linked`
+              : "Not linked"}
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onView}
+            className="rounded-xl border border-black/10 px-3.5 py-2.5 text-xs font-black text-[#0B2633] hover:bg-black/[0.03]"
+          >
+            View Profile
+          </button>
+
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-xl bg-[#168DB8] px-3.5 py-2.5 text-xs font-black text-white hover:bg-[#11799D]"
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RecordBlock({
+  label,
+  value,
+  detail,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  accent?: boolean;
 }) {
   return (
-    <th
-      className={`px-5 py-4 text-[10px] font-black uppercase tracking-[0.14em] text-black/35 ${
-        align === "right"
-          ? "text-right"
-          : ""
-      }`}
-    >
-      {children}
-    </th>
+    <div className="p-5">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/30">
+        {label}
+      </p>
+
+      <p
+        className={`mt-2 break-words text-sm font-black ${
+          accent
+            ? "text-[#168DB8]"
+            : "text-[#0B2633]"
+        }`}
+      >
+        {value}
+      </p>
+
+      <p className="mt-1 break-words text-xs font-medium leading-5 text-black/40">
+        {detail}
+      </p>
+    </div>
   );
 }
 
@@ -2404,45 +2551,74 @@ function MemberDetails({
   onActivate: () => void;
   onSuspend: () => void;
 }) {
+  const name =
+    getMemberName(
+      member,
+    );
+
+  const initials =
+    getMemberInitials(
+      member,
+    );
+
   return (
     <div>
-      <div className="border-b border-black/5 px-6 py-6 sm:px-8">
+      <div className="border-b border-black/5 bg-[#FBFDFE] px-6 py-6 sm:px-8">
         <div className="flex items-start justify-between gap-5">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
-              Member Record
-            </p>
+          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#168DB8]/10 text-lg font-black text-[#168DB8] sm:h-20 sm:w-20">
+              {initials}
+            </div>
 
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-[#0B2633] sm:text-3xl">
-              {member.memberNumber}
-            </h2>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
+                Member Profile
+              </p>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[#168DB8]/5 px-3 py-1.5 text-[11px] font-black text-[#168DB8]">
+              <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-[#0B2633] sm:text-3xl">
+                {name}
+              </h2>
+
+              <p className="mt-1 text-sm font-black text-[#168DB8]">
+                {
+                  member.memberNumber
+                }
+              </p>
+
+              <p className="mt-1 text-xs text-black/40">
                 {formatCategory(
                   member.category,
                 )}
-              </span>
+              </p>
 
-              <span
-                className={`rounded-full px-3 py-1.5 text-[11px] font-black ${statusClasses(
-                  member.status,
-                )}`}
-              >
-                {formatStatus(
-                  member.status,
-                )}
-              </span>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-black ${statusClasses(
+                    member.status,
+                  )}`}
+                >
+                  {formatStatus(
+                    member.status,
+                  )}
+                </span>
 
-              <span
-                className={`rounded-full px-3 py-1.5 text-[11px] font-black ${activationClasses(
-                  member.activationStatus,
-                )}`}
-              >
-                {formatStatus(
-                  member.activationStatus,
-                )}
-              </span>
+                <span
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-black ${activationClasses(
+                    member.activationStatus,
+                  )}`}
+                >
+                  Activation:{" "}
+                  {formatStatus(
+                    member.activationStatus,
+                  )}
+                </span>
+
+                <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black text-black/45 ring-1 ring-black/5">
+                  {sourceLabel(
+                    member.source,
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -2450,7 +2626,7 @@ function MemberDetails({
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/10 text-lg text-black/50 hover:bg-black/[0.03]"
-            aria-label="Close"
+            aria-label="Close member profile"
           >
             ×
           </button>
@@ -2458,22 +2634,58 @@ function MemberDetails({
       </div>
 
       <div className="space-y-7 p-6 sm:p-8">
-        <DetailSection title="Identity">
-          <DetailBox
+        <section className="grid gap-4 sm:grid-cols-3">
+          <ProfileMetric
+            label="Membership"
+            value={formatStatus(
+              member.status,
+            )}
+          />
+
+          <ProfileMetric
+            label="Activation"
+            value={formatStatus(
+              member.activationStatus,
+            )}
+          />
+
+          <ProfileMetric
+            label="Account"
+            value={
+              member.user
+                ? formatStatus(
+                    member.user
+                      .status,
+                  )
+                : "Not Linked"
+            }
+          />
+        </section>
+
+        <ProfileSection
+          title="Identity"
+          description="Core membership identifiers and category information."
+        >
+          <ProfileField
+            label="Full Name"
+            value={name}
+          />
+
+          <ProfileField
             label="Member Number"
             value={
               member.memberNumber
             }
           />
 
-          <DetailBox
+          <ProfileField
             label="Category"
             value={formatCategory(
               member.category,
             )}
           />
 
-          <DetailBox
+          <ProfileField
             label="Registration / Admission Number"
             value={
               member.registrationNumber ??
@@ -2483,63 +2695,73 @@ function MemberDetails({
 
           {member.category ===
             "ALUMNI" && (
-            <DetailBox
-              label="National ID"
-              value={
-                member.nationalId
-                  ? "Protected"
-                  : "Not provided"
-              }
-            />
-          )}
+            <>
+              <ProfileField
+                label="National ID"
+                value={
+                  member.nationalId
+                    ? "Protected"
+                    : "Not provided"
+                }
+              />
 
-          {member.category ===
-            "ALUMNI" && (
-            <DetailBox
-              label="Graduation Year"
-              value={
-                member.graduationYear
-                  ? String(
-                      member.graduationYear,
-                    )
-                  : "Not provided"
-              }
-            />
-          )}
-
-          {member.category ===
-            "LECTURER" && (
-            <DetailBox
-              label="Staff / Employee Number"
-              value={
-                member.staffNumber ??
-                "Not provided"
-              }
-            />
+              <ProfileField
+                label="Graduation Year"
+                value={
+                  member.graduationYear
+                    ? String(
+                        member.graduationYear,
+                      )
+                    : "Not provided"
+                }
+              />
+            </>
           )}
 
           {member.category ===
             "LECTURER" && (
-            <DetailBox
-              label="Position"
-              value={
-                member.position ??
-                "Not provided"
-              }
-            />
-          )}
-        </DetailSection>
+            <>
+              <ProfileField
+                label="Staff / Employee Number"
+                value={
+                  member.staffNumber ??
+                  "Not provided"
+                }
+              />
 
-        <DetailSection title="Academic / Professional">
-          <DetailBox
+              <ProfileField
+                label="Position"
+                value={
+                  member.position ??
+                  "Not provided"
+                }
+              />
+            </>
+          )}
+        </ProfileSection>
+
+        <ProfileSection
+          title="Academic & Professional"
+          description="The academic or professional context associated with the membership."
+        >
+          <ProfileField
             label="Programme"
             value={
               member.programme ??
-              "Not applicable"
+              "Not provided"
             }
           />
 
-          <DetailBox
+          <ProfileField
+            label="Year of Study"
+            value={
+              member.yearOfStudy
+                ? `Year ${member.yearOfStudy}`
+                : "Not applicable"
+            }
+          />
+
+          <ProfileField
             label="Faculty / School"
             value={
               member.faculty ??
@@ -2547,29 +2769,20 @@ function MemberDetails({
             }
           />
 
-          <DetailBox
+          <ProfileField
             label="Department"
             value={
               member.department ??
               "Not provided"
             }
           />
+        </ProfileSection>
 
-          {member.category ===
-            "STUDENT" && (
-            <DetailBox
-              label="Year of Study"
-              value={
-                member.yearOfStudy
-                  ? `Year ${member.yearOfStudy}`
-                  : "Not provided"
-              }
-            />
-          )}
-        </DetailSection>
-
-        <DetailSection title="Contact">
-          <DetailBox
+        <ProfileSection
+          title="Contact Information"
+          description="Current contact details stored against the membership record."
+        >
+          <ProfileField
             label="Email"
             value={
               member.email ??
@@ -2578,7 +2791,7 @@ function MemberDetails({
             }
           />
 
-          <DetailBox
+          <ProfileField
             label="Phone"
             value={
               member.phone ??
@@ -2586,7 +2799,7 @@ function MemberDetails({
             }
           />
 
-          <DetailBox
+          <ProfileField
             label="County"
             value={
               member.county ??
@@ -2594,73 +2807,113 @@ function MemberDetails({
             }
           />
 
-          <DetailBox
+          <ProfileField
             label="Address"
             value={
               member.address ??
               "Not provided"
             }
           />
-        </DetailSection>
+        </ProfileSection>
 
-        <DetailSection title="Membership Lifecycle">
-          <DetailBox
+        <ProfileSection
+          title="Membership Lifecycle"
+          description="System-controlled membership state and record history."
+        >
+          <ProfileField
             label="Member Status"
             value={formatStatus(
               member.status,
             )}
           />
 
-          <DetailBox
-            label="Activation"
+          <ProfileField
+            label="Activation Status"
             value={formatStatus(
               member.activationStatus,
             )}
           />
 
-          <DetailBox
+          <ProfileField
             label="Source"
             value={sourceLabel(
               member.source,
             )}
           />
 
-          <DetailBox
+          <ProfileField
             label="Created"
             value={formatDate(
               member.createdAt,
             )}
           />
 
-          <DetailBox
+          <ProfileField
             label="Last Updated"
             value={formatDate(
               member.updatedAt,
             )}
           />
+        </ProfileSection>
 
-          <DetailBox
-            label="Linked Account"
+        <ProfileSection
+          title="System Account"
+          description="The KUHRSA system identity linked to this membership record."
+        >
+          <ProfileField
+            label="Account Status"
             value={
-              member.user?.email ??
+              member.user
+                ? formatStatus(
+                    member.user
+                      .status,
+                  )
+                : "Not linked"
+            }
+          />
+
+          <ProfileField
+            label="Account Email"
+            value={
+              member.user
+                ?.email ??
               "Not linked"
             }
           />
-        </DetailSection>
 
-        <div className="rounded-2xl bg-[#F6FBFD] p-5 ring-1 ring-black/5">
+          <ProfileField
+            label="User ID"
+            value={
+              member.user?.id ??
+              "Not linked"
+            }
+          />
+
+          <ProfileField
+            label="System Owner"
+            value={
+              member.user
+                ?.isSystemOwner
+                ? "Yes"
+                : "No"
+            }
+          />
+        </ProfileSection>
+
+        <div className="rounded-2xl border border-[#168DB8]/10 bg-[#F6FBFD] p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#168DB8]">
-            Administration Note
+            Administration Control
           </p>
 
           <p className="mt-2 text-sm leading-6 text-black/55">
-            Member lifecycle actions are processed
-            through the backend and recorded in the
-            audit log.
+            Membership state changes are processed by
+            the backend and recorded in the KUHRSA audit
+            trail. System-controlled identifiers such as
+            the member number should not be edited manually.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 border-t border-black/5 pt-6">
           <button
             type="button"
             onClick={onEdit}
@@ -2686,56 +2939,84 @@ function MemberDetails({
             "ACTIVE" &&
             member.status !==
               "ARCHIVED" && (
-              <button
-                type="button"
-                onClick={onActivate}
-                disabled={busy}
-                className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Activate
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onActivate}
+              disabled={busy}
+              className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Activate
+            </button>
+          )}
 
           {member.status !==
             "SUSPENDED" &&
             member.status !==
               "ARCHIVED" && (
-              <button
-                type="button"
-                onClick={onSuspend}
-                disabled={busy}
-                className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:opacity-50"
-              >
-                Suspend
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onSuspend}
+              disabled={busy}
+              className="rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white hover:bg-rose-700 disabled:opacity-50"
+            >
+              Suspend
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function DetailSection({
+function ProfileMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-[#F8FBFC] p-5 ring-1 ring-black/5">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/30">
+        {label}
+      </p>
+
+      <p className="mt-2 text-sm font-black text-[#0B2633]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function ProfileSection({
   title,
+  description,
   children,
 }: {
   title: string;
+  description: string;
   children: ReactNode;
 }) {
   return (
     <section>
-      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-black/35">
-        {title}
-      </p>
+      <div className="mb-4">
+        <h3 className="text-lg font-black tracking-tight text-[#0B2633]">
+          {title}
+        </h3>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <p className="mt-1 text-sm leading-6 text-black/40">
+          {description}
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
         {children}
       </div>
     </section>
   );
 }
 
-function DetailBox({
+function ProfileField({
   label,
   value,
 }: {
@@ -2744,7 +3025,7 @@ function DetailBox({
 }) {
   return (
     <div className="rounded-2xl bg-[#F8FBFC] p-4 ring-1 ring-black/5">
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/35">
+      <p className="text-[10px] font-black uppercase tracking-[0.13em] text-black/30">
         {label}
       </p>
 
@@ -2789,7 +3070,7 @@ function MemberFormPanel({
 
   return (
     <form onSubmit={onSubmit}>
-      <div className="border-b border-black/5 px-6 py-6 sm:px-8">
+      <div className="border-b border-black/5 bg-[#FBFDFE] px-6 py-6 sm:px-8">
         <div className="flex items-start justify-between gap-5">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
@@ -2804,10 +3085,10 @@ function MemberFormPanel({
                 : "Add KUHRSA Member"}
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-black/45">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-black/45">
               {editingMember
-                ? "Update the fields currently supported by the member update endpoint."
-                : "Create a complete membership record using the same category rules used by the KUHRSA migration engine."}
+                ? "The current member update API supports changing the registration/admission identifier and linked account email. Additional profile-field editing can be enabled as the backend update contract expands."
+                : "Create a complete member record. The backend generates the permanent KUHRSA member number and creates the linked MEMBER account."}
             </p>
           </div>
 
@@ -2824,12 +3105,11 @@ function MemberFormPanel({
       </div>
 
       <div className="space-y-7 p-6 sm:p-8">
-        {/* Category */}
         <section>
           <FormSectionTitle
             number="01"
             title="Membership Category"
-            description="Choose the membership classification first. The remaining fields adapt to it."
+            description="Select the category first. The form adapts to the member classification."
           />
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -2846,7 +3126,7 @@ function MemberFormPanel({
                   "ALUMNI" as const,
                 label: "Alumni",
                 description:
-                  "Former Kisii University student",
+                  "Former university student",
               },
               {
                 value:
@@ -2878,7 +3158,7 @@ function MemberFormPanel({
                     option.value
                       ? "border-[#168DB8] bg-[#168DB8]/5 ring-4 ring-[#168DB8]/10"
                       : "border-black/10 bg-white hover:bg-black/[0.02]"
-                  } disabled:cursor-not-allowed disabled:opacity-70`}
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <p className="text-sm font-black text-[#0B2633]">
                     {
@@ -2897,51 +3177,67 @@ function MemberFormPanel({
           </div>
         </section>
 
-        {/* Personal */}
         <section>
           <FormSectionTitle
             number="02"
             title="Personal Information"
-            description="Enter the member's legal names as they should appear in the KUHRSA record."
+            description="The member identity used across the membership and system account."
           />
 
           <div className="grid gap-5 sm:grid-cols-2">
             <FormInput
               label="First Name"
               required
-              value={form.firstName}
-              onChange={(value) =>
+              value={
+                form.firstName
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "firstName",
                   value,
                 )
               }
-              disabled={busy}
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
               placeholder="First name"
             />
 
             <FormInput
               label="Last Name"
               required
-              value={form.lastName}
-              onChange={(value) =>
+              value={
+                form.lastName
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "lastName",
                   value,
                 )
               }
-              disabled={busy}
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
               placeholder="Last name"
             />
           </div>
         </section>
 
-        {/* Category specific */}
         <section>
           <FormSectionTitle
             number="03"
             title="Category-Specific Information"
-            description="Only the fields relevant to the selected membership category are required."
+            description="Only the information relevant to the selected member category is displayed."
           />
 
           {form.category ===
@@ -2962,7 +3258,7 @@ function MemberFormPanel({
                   )
                 }
                 disabled={busy}
-                placeholder="e.g. KSU/HR/2024/001"
+                placeholder="KSU/HR/2024/001"
               />
 
               <FormSelect
@@ -2979,7 +3275,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
               >
                 <option value="">
                   Select year
@@ -3016,8 +3317,13 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
-                placeholder="e.g. BSc Human Resource Management"
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
+                placeholder="BSc Human Resource Management"
               />
 
               <FormInput
@@ -3034,7 +3340,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Faculty or School"
               />
 
@@ -3052,7 +3363,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Department"
               />
             </div>
@@ -3075,7 +3391,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="National ID number"
               />
 
@@ -3110,10 +3431,15 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
               >
                 <option value="">
-                  Select graduation year
+                  Select year
                 </option>
 
                 {Array.from(
@@ -3161,7 +3487,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Programme studied"
               />
 
@@ -3179,7 +3510,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Faculty or School"
               />
 
@@ -3197,7 +3533,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Department"
               />
             </div>
@@ -3220,8 +3561,13 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
-                placeholder="e.g. STAFF-0001"
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
+                placeholder="STAFF-0001"
               />
 
               <FormInput
@@ -3238,8 +3584,13 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
-                placeholder="e.g. Lecturer"
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
+                placeholder="Lecturer"
               />
 
               <FormInput
@@ -3256,7 +3607,12 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Faculty or School"
               />
 
@@ -3274,19 +3630,23 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(
+                    editingMember,
+                  )
+                }
                 placeholder="Department"
               />
             </div>
           )}
         </section>
 
-        {/* Contact */}
         <section>
           <FormSectionTitle
             number="04"
             title="Contact Information"
-            description="Email is currently required by the administrative member-creation service because it creates the linked user account."
+            description="Contact information used by the membership record and linked account."
           />
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -3294,8 +3654,12 @@ function MemberFormPanel({
               label="Email Address"
               required
               type="email"
-              value={form.email}
-              onChange={(value) =>
+              value={
+                form.email
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "email",
                   value,
@@ -3307,41 +3671,68 @@ function MemberFormPanel({
 
             <FormInput
               label="Phone Number"
-              value={form.phone}
-              onChange={(value) =>
+              value={
+                form.phone
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "phone",
                   value,
                 )
               }
-              disabled={busy}
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
               placeholder="07XXXXXXXX"
             />
 
             <FormInput
               label="County"
-              value={form.county}
-              onChange={(value) =>
+              value={
+                form.county
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "county",
                   value,
                 )
               }
-              disabled={busy}
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
               placeholder="County"
             />
 
             <FormInput
               label="Address"
-              value={form.address}
-              onChange={(value) =>
+              value={
+                form.address
+              }
+              onChange={(
+                value,
+              ) =>
                 field(
                   "address",
                   value,
                 )
               }
-              disabled={busy}
-              placeholder="Postal / physical address"
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
+              placeholder="Address"
             />
           </div>
         </section>
@@ -3349,18 +3740,15 @@ function MemberFormPanel({
         {!editingMember && (
           <div className="rounded-2xl border border-[#168DB8]/10 bg-[#F6FBFD] p-5">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#168DB8]">
-              Account & Activation
+              System Handling
             </p>
 
             <p className="mt-2 text-sm leading-6 text-black/55">
-              Administrative member entry is stored as{" "}
-              <strong>
-                Manual Entry
-              </strong>
-              . The backend creates the linked user
-              account, assigns the MEMBER role, generates
-              the KUHRSA member number, and places the
-              member into the activation workflow.
+              The backend automatically generates the
+              permanent member number, creates the linked
+              user account, assigns the MEMBER role,
+              creates a membership activation record and
+              records the operation in the audit log.
             </p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -3370,7 +3758,7 @@ function MemberFormPanel({
               />
 
               <MiniStatus
-                label="User Account"
+                label="System Account"
                 value="Created"
               />
 
@@ -3400,7 +3788,7 @@ function MemberFormPanel({
             {busy
               ? "Saving Member..."
               : editingMember
-                ? "Save Member Changes"
+                ? "Save Supported Changes"
                 : "Create Member Record"}
           </button>
         </div>
@@ -3460,6 +3848,7 @@ function FormInput({
     <label className="block">
       <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-black/40">
         {label}
+
         {required && (
           <span className="ml-1 text-[#168DB8]">
             *
@@ -3470,15 +3859,21 @@ function FormInput({
       <input
         type={type}
         value={value}
-        onChange={(event) =>
+        onChange={(
+          event,
+        ) =>
           onChange(
             event.target.value,
           )
         }
-        placeholder={placeholder}
+        placeholder={
+          placeholder
+        }
         required={required}
-        disabled={disabled}
-        className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm font-semibold text-[#0B2633] outline-none placeholder:text-black/25 transition focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10 disabled:bg-black/[0.03] disabled:opacity-70"
+        disabled={
+          disabled
+        }
+        className="h-12 w-full rounded-xl border border-black/10 bg-white px-4 text-sm font-semibold text-[#0B2633] outline-none placeholder:text-black/25 transition focus:border-[#168DB8] focus:ring-4 focus:ring-[#168DB8]/10 disabled:bg-black/[0.03] disabled:opacity-60"
       />
     </label>
   );
@@ -3505,6 +3900,7 @@ function FormSelect({
     <label className="block">
       <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-black/40">
         {label}
+
         {required && (
           <span className="ml-1 text-[#168DB8]">
             *
@@ -3514,7 +3910,9 @@ function FormSelect({
 
       <select
         value={value}
-        onChange={(event) =>
+        onChange={(
+          event,
+        ) =>
           onChange(
             event.target.value,
           )
@@ -3590,12 +3988,11 @@ function MigrationWorkspace({
 
   const canImport =
     migrationBatch?.status ===
-    "VALIDATED" &&
+      "VALIDATED" &&
     validRows > 0;
 
   return (
     <div className="mt-6 space-y-6">
-      {/* Intro */}
       <section className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-3xl">
@@ -3608,10 +4005,10 @@ function MigrationWorkspace({
             </h2>
 
             <p className="mt-3 text-sm leading-7 text-black/50">
-              Download the official template, prepare
-              your records, upload the file and review
-              validation results before any members are
-              imported into the live membership registry.
+              Download the official migration template,
+              prepare the records, upload the file and
+              review validation results before anything
+              is imported into the membership registry.
             </p>
           </div>
 
@@ -3627,7 +4024,6 @@ function MigrationWorkspace({
         </div>
       </section>
 
-      {/* Upload */}
       <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <div className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-black/5 sm:p-8">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/35">
@@ -3772,7 +4168,6 @@ function MigrationWorkspace({
         </div>
       </section>
 
-      {/* Batch */}
       {migrationBatch && (
         <>
           <section className="overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-black/5">
@@ -3883,7 +4278,6 @@ function MigrationWorkspace({
             </div>
           </section>
 
-          {/* Review */}
           <section className="overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-black/5">
             <div className="border-b border-black/5 p-6 sm:p-7">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -3893,7 +4287,7 @@ function MigrationWorkspace({
                   </p>
 
                   <h3 className="mt-2 text-xl font-black text-[#0B2633]">
-                    Review imported records
+                    Review migration records
                   </h3>
 
                   <p className="mt-1 text-sm text-black/45">
@@ -3945,8 +4339,8 @@ function MigrationWorkspace({
                 </p>
 
                 <p className="mt-1 text-xs text-black/40">
-                  Upload and validate a migration file to
-                  populate this review area.
+                  Upload and validate a migration file to populate
+                  this review area.
                 </p>
               </div>
             ) : (
@@ -3971,7 +4365,7 @@ function MigrationWorkspace({
                       </TableHead>
 
                       <TableHead>
-                        Identifier
+                        Identification
                       </TableHead>
 
                       <TableHead>
@@ -4127,12 +4521,11 @@ function MigrationWorkspace({
                 "COMPLETED" &&
               migrationBatch.status !==
                 "COMPLETED_WITH_ERRORS" && (
-                <div className="border-t border-black/5 bg-[#FFFCF5] px-6 py-4 text-sm text-amber-700">
-                  Import becomes available only after
-                  the backend reports the batch as fully
-                  validated.
-                </div>
-              )}
+              <div className="border-t border-black/5 bg-[#FFFCF5] px-6 py-4 text-sm text-amber-700">
+                Import becomes available only after the
+                backend reports the batch as fully validated.
+              </div>
+            )}
           </section>
         </>
       )}
@@ -4169,5 +4562,17 @@ function MigrationStat({
         {value}
       </p>
     </div>
+  );
+}
+
+function TableHead({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <th className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.14em] text-black/35">
+      {children}
+    </th>
   );
 }
