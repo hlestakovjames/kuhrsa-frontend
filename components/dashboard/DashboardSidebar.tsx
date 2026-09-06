@@ -31,6 +31,7 @@ type NavItem = {
     | "departments"
     | "roles"
     | "reports"
+    | "notifications"
     | "settings";
 };
 
@@ -125,6 +126,11 @@ const administrationItems: NavItem[] = [
     label: "Users",
     href: "/administration/users",
     icon: "users",
+  },
+  {
+    label: "Notifications",
+    href: "/administration/notifications",
+    icon: "notifications",
   },
   {
     label: "Roles & Permissions",
@@ -222,7 +228,10 @@ function getPortalSections(
     items: memberItems,
   });
 
-  if (portal === "executive" && hasExecutiveAccess) {
+  if (
+    portal === "executive" &&
+    hasExecutiveAccess
+  ) {
     sections.push({
       label: "Executive",
       items: executiveItems,
@@ -498,6 +507,21 @@ function Icon({
           aria-hidden="true"
         >
           <path d="M5 20V10M12 20V4M19 20v-7" />
+        </svg>
+      );
+
+    case "notifications":
+      return (
+        <svg
+          className={common}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          aria-hidden="true"
+        >
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+          <path d="M10 21h4" />
         </svg>
       );
 
