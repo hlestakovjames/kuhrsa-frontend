@@ -1,15 +1,14 @@
 "use client";
 
-import {
-  ReactNode,
-  useState,
-} from "react";
+import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import {
   AuthUser,
   logout,
   PortalType,
 } from "@/lib/auth";
+
 import DashboardSidebar from "./DashboardSidebar";
 
 type DashboardShellProps = {
@@ -18,10 +17,7 @@ type DashboardShellProps = {
   children: ReactNode;
 };
 
-const titles: Record<
-  PortalType,
-  string
-> = {
+const titles: Record<PortalType, string> = {
   member: "Member Portal",
   executive: "Executive Portal",
   administration: "Administration Portal",
@@ -54,7 +50,7 @@ export default function DashboardShell({
         }
       />
 
-      <div className="flex h-screen flex-col lg:pl-[270px]">
+      <div className="flex h-screen flex-col lg:pl-[290px]">
         <header className="sticky top-0 z-30 shrink-0 border-b border-black/5 bg-white/95 backdrop-blur">
           <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
