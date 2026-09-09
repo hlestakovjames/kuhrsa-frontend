@@ -14,10 +14,15 @@ import {
 } from "@/lib/auth";
 
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import MemberAccountWorkspace from "@/components/member/MemberAccountWorkspace";
+import MemberCommunicationWorkspace from "@/components/member/MemberCommunicationWorkspace";
+import MemberContentWorkspace from "@/components/member/MemberContentWorkspace";
 import MemberDashboardWorkspace from "@/components/member/MemberDashboardWorkspace";
+import MemberElectionsWorkspace from "@/components/member/MemberElectionsWorkspace";
 import MemberEventsActivitiesWorkspace from "@/components/member/MemberEventsActivitiesWorkspace";
 import MemberFinanceWorkspace from "@/components/member/MemberFinanceWorkspace";
 import MemberMembershipWorkspace from "@/components/member/MemberMembershipWorkspace";
+import MemberServicesWorkspace from "@/components/member/MemberServicesWorkspace";
 
 type MemberView =
   | "overview"
@@ -46,7 +51,36 @@ type MemberView =
   | "activity-registration"
   | "registrations"
   | "attendance"
-  | "certificates";
+  | "event-history"
+  | "certificates"
+  | "elections-overview"
+  | "elections-active"
+  | "elections-information"
+  | "elections-candidates"
+  | "elections-eligibility"
+  | "elections-voting"
+  | "elections-record"
+  | "elections-results"
+  | "content-announcements"
+  | "content-news"
+  | "content-blog"
+  | "content-resources"
+  | "content-downloads"
+  | "communication-overview"
+  | "communication-notifications"
+  | "communication-messages"
+  | "communication-support"
+  | "communication-feedback"
+  | "communication-preferences"
+  | "services-overview"
+  | "services-submit"
+  | "services-requests"
+  | "services-status"
+  | "services-help"
+  | "account-profile"
+  | "account-security"
+  | "account-login-history"
+  | "account-settings";
 
 type ProtectedDashboardProps = {
   portal: PortalType;
@@ -80,6 +114,79 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:3001";
 
+const financeViews = new Set<MemberView>([
+  "finance-overview",
+  "finance-fees",
+  "finance-payment",
+  "finance-history",
+  "finance-balance",
+  "finance-receipts",
+  "finance-statements",
+]);
+
+const eventsActivitiesViews =
+  new Set<MemberView>([
+    "events-overview",
+    "events",
+    "upcoming-events",
+    "upcoming-activities",
+    "activities",
+    "event-registration",
+    "activity-registration",
+    "registrations",
+    "attendance",
+    "event-history",
+    "certificates",
+  ]);
+
+const electionsViews =
+  new Set<MemberView>([
+    "elections-overview",
+    "elections-active",
+    "elections-information",
+    "elections-candidates",
+    "elections-eligibility",
+    "elections-voting",
+    "elections-record",
+    "elections-results",
+  ]);
+
+const contentViews =
+  new Set<MemberView>([
+    "content-announcements",
+    "content-news",
+    "content-blog",
+    "content-resources",
+    "content-downloads",
+  ]);
+
+const communicationViews =
+  new Set<MemberView>([
+    "communication-overview",
+    "communication-notifications",
+    "communication-messages",
+    "communication-support",
+    "communication-feedback",
+    "communication-preferences",
+  ]);
+
+const servicesViews =
+  new Set<MemberView>([
+    "services-overview",
+    "services-submit",
+    "services-requests",
+    "services-status",
+    "services-help",
+  ]);
+
+const accountViews =
+  new Set<MemberView>([
+    "account-profile",
+    "account-security",
+    "account-login-history",
+    "account-settings",
+  ]);
+
 function statusLabel(status?: string) {
   if (!status) {
     return "Not available";
@@ -92,30 +199,6 @@ function statusLabel(status?: string) {
       letter.toUpperCase(),
     );
 }
-
-const financeViews = new Set<MemberView>([
-  "finance-overview",
-  "finance-fees",
-  "finance-payment",
-  "finance-history",
-  "finance-balance",
-  "finance-receipts",
-  "finance-statements",
-]);
-
-const eventsActivitiesViews = new Set<MemberView>([
-  "events-overview",
-  "events",
-  "upcoming-events",
-  "activities",
-  "upcoming-activities",
-  "event-registration",
-  "activity-registration",
-  "registrations",
-  "attendance",
-  "history",
-  "certificates",
-]);
 
 function getFinanceView(
   view: MemberView,
@@ -142,6 +225,10 @@ function getEventsActivitiesView(
     return "overview";
   }
 
+  if (view === "event-history") {
+    return "history";
+  }
+
   return view as
     | "events"
     | "activities"
@@ -151,8 +238,85 @@ function getEventsActivitiesView(
     | "activity-registration"
     | "registrations"
     | "attendance"
-    | "history"
     | "certificates";
+}
+
+function getElectionsView(
+  view: MemberView,
+) {
+  if (
+    view === "elections-overview"
+  ) {
+    return "overview";
+  }
+
+  return view.replace(
+    "elections-",
+    "",
+  ) as
+    | "active"
+    | "information"
+    | "candidates"
+    | "eligibility"
+    | "voting"
+    | "record"
+    | "results";
+}
+
+function getContentView(
+  view: MemberView,
+) {
+  return view.replace(
+    "content-",
+    "",
+  ) as
+    | "announcements"
+    | "news"
+    | "blog"
+    | "resources"
+    | "downloads";
+}
+
+function getCommunicationView(
+  view: MemberView,
+) {
+  return view.replace(
+    "communication-",
+    "",
+  ) as
+    | "overview"
+    | "notifications"
+    | "messages"
+    | "support"
+    | "feedback"
+    | "preferences";
+}
+
+function getServicesView(
+  view: MemberView,
+) {
+  return view.replace(
+    "services-",
+    "",
+  ) as
+    | "overview"
+    | "submit"
+    | "requests"
+    | "status"
+    | "help";
+}
+
+function getAccountView(
+  view: MemberView,
+) {
+  return view.replace(
+    "account-",
+    "",
+  ) as
+    | "profile"
+    | "security"
+    | "login-history"
+    | "settings";
 }
 
 export default function ProtectedDashboard({
@@ -339,60 +503,9 @@ export default function ProtectedDashboard({
 
   const member = user.member;
 
-  let workspace;
+  let workspace: React.ReactNode;
 
-  if (portal === "member") {
-    if (
-      financeViews.has(memberView)
-    ) {
-      workspace = (
-        <MemberFinanceWorkspace
-          view={getFinanceView(
-            memberView,
-          )}
-        />
-      );
-    } else if (
-      eventsActivitiesViews.has(
-        memberView,
-      )
-    ) {
-      workspace = (
-        <MemberEventsActivitiesWorkspace
-          view={getEventsActivitiesView(
-            memberView,
-          )}
-        />
-      );
-    } else if (
-      memberView ===
-        "overview" &&
-      title ===
-        "Member Dashboard"
-    ) {
-      workspace = (
-        <MemberDashboardWorkspace
-          user={user}
-        />
-      );
-    } else {
-      workspace = (
-        <MemberMembershipWorkspace
-          view={memberView as
-            | "overview"
-            | "profile"
-            | "status"
-            | "number"
-            | "card"
-            | "qr"
-            | "history"
-            | "activation"
-            | "renewal"
-            | "verification"}
-        />
-      );
-    }
-  } else {
+  if (portal !== "member") {
     workspace = (
       <ExistingPortalWorkspace
         portal={portal}
@@ -404,6 +517,105 @@ export default function ProtectedDashboard({
         isSystemOwner={
           isSystemOwner
         }
+      />
+    );
+  } else if (
+    memberView === "overview" &&
+    title === "Member Dashboard"
+  ) {
+    workspace = (
+      <MemberDashboardWorkspace
+        user={user}
+      />
+    );
+  } else if (
+    financeViews.has(memberView)
+  ) {
+    workspace = (
+      <MemberFinanceWorkspace
+        view={getFinanceView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    eventsActivitiesViews.has(
+      memberView,
+    )
+  ) {
+    workspace = (
+      <MemberEventsActivitiesWorkspace
+        view={getEventsActivitiesView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    electionsViews.has(memberView)
+  ) {
+    workspace = (
+      <MemberElectionsWorkspace
+        view={getElectionsView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    contentViews.has(memberView)
+  ) {
+    workspace = (
+      <MemberContentWorkspace
+        view={getContentView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    communicationViews.has(
+      memberView,
+    )
+  ) {
+    workspace = (
+      <MemberCommunicationWorkspace
+        view={getCommunicationView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    servicesViews.has(memberView)
+  ) {
+    workspace = (
+      <MemberServicesWorkspace
+        view={getServicesView(
+          memberView,
+        )}
+      />
+    );
+  } else if (
+    accountViews.has(memberView)
+  ) {
+    workspace = (
+      <MemberAccountWorkspace
+        view={getAccountView(
+          memberView,
+        )}
+      />
+    );
+  } else {
+    workspace = (
+      <MemberMembershipWorkspace
+        view={memberView as
+          | "overview"
+          | "profile"
+          | "status"
+          | "number"
+          | "card"
+          | "qr"
+          | "history"
+          | "activation"
+          | "renewal"
+          | "verification"}
       />
     );
   }

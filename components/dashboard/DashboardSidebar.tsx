@@ -61,13 +61,8 @@ function getMemberSections(): NavSection[] {
         },
         {
           label: "Membership Summary",
-          href: "/dashboard/membership/summary",
+          href: "/dashboard/membership",
           icon: "membership",
-        },
-        {
-          label: "Quick Actions",
-          href: "/dashboard/quick-actions",
-          icon: "dashboard",
         },
         {
           label: "Upcoming Events",
