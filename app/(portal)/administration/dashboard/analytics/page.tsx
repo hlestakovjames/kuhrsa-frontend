@@ -1,10 +1,10 @@
 import ProtectedPortal from "@/components/auth/ProtectedPortal";
 import AdministrationDashboardWorkspace from "@/components/administration/AdministrationDashboardWorkspace";
 
-export default function AdministrationDashboardPage() {
+export default function AdministrationDashboardAnalyticsPage() {
   return (
     <ProtectedPortal portal="administration">
-      <AdministrationDashboardWorkspace view="dashboard" />
+      <AdministrationDashboardWorkspace view="analytics" />
     </ProtectedPortal>
   );
 }
