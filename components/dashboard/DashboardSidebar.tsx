@@ -1825,7 +1825,7 @@ export default function DashboardSidebar({
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
             <Image
-              src="/images/kuhrsa/kuhrsa_logo.jpeg"
+              src="/images/kuhrsa_logo.jpeg"
               alt="KUHRSA official logo"
               width={44}
               height={44}

@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth";
 
 import DashboardShell from "@/components/dashboard/DashboardShell";
+import ExecutiveDashboardWorkspace from "@/components/executive/ExecutiveDashboardWorkspace";
 import MemberAccountWorkspace from "@/components/member/MemberAccountWorkspace";
 import MemberCommunicationWorkspace from "@/components/member/MemberCommunicationWorkspace";
 import MemberContentWorkspace from "@/components/member/MemberContentWorkspace";
@@ -505,7 +506,14 @@ export default function ProtectedDashboard({
 
   let workspace: React.ReactNode;
 
-  if (portal !== "member") {
+  if (portal === "executive") {
+    workspace = (
+      <ExecutiveDashboardWorkspace
+        user={user}
+        dashboard={dashboard}
+      />
+    );
+  } else if (portal === "administration") {
     workspace = (
       <ExistingPortalWorkspace
         portal={portal}
