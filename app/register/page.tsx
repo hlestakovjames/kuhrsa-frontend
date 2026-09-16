@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 type Category = "STUDENT" | "ALUMNI" | "LECTURER";
 
@@ -32,8 +32,6 @@ type FormData = {
   address: string;
   county: string;
 
-  password: string;
-  confirmPassword: string;
   acceptTerms: boolean;
 };
 
@@ -74,13 +72,6 @@ type RegistrationResponse = {
     status: string;
   };
 
-  payment: {
-    required: boolean;
-    registrationFee: number;
-    annualMembershipFee: number;
-    total: number;
-    status: string;
-  };
 };
 
 type ApiErrorResponse = {
@@ -118,8 +109,6 @@ const initialForm: FormData = {
   address: "",
   county: "",
 
-  password: "",
-  confirmPassword: "",
   acceptTerms: false,
 };
 
@@ -150,18 +139,13 @@ const steps = [
   },
   {
     number: 5,
-    title: "Account",
-    description: "Create your portal account.",
-  },
-  {
-    number: 6,
     title: "Review",
     description: "Check your information.",
   },
   {
-    number: 7,
-    title: "Status",
-    description: "Your registration status.",
+    number: 6,
+    title: "Submitted",
+    description: "Your registration has been submitted.",
   },
 ];
 
@@ -297,7 +281,6 @@ export default function RegisterPage() {
 
   const currentStep = steps[step - 1];
 
-  const totalAmount = useMemo(() => 250 + 200, []);
 
   const membershipRows: ReviewRow[] = (() => {
     const rows: ReviewRow[] = [];
@@ -512,20 +495,6 @@ export default function RegisterPage() {
     }
 
     if (currentStep === 5) {
-      if (form.password.length < 8) {
-        setError(
-          "Password must be at least 8 characters long.",
-        );
-        return false;
-      }
-
-      if (
-        form.password !== form.confirmPassword
-      ) {
-        setError("Passwords do not match.");
-        return false;
-      }
-
       if (!form.acceptTerms) {
         setError(
           "You must accept the KUHRSA terms and conditions.",
@@ -543,7 +512,7 @@ export default function RegisterPage() {
     }
 
     setStep((current) =>
-      current < 7
+      current < 6
         ? ((current + 1) as Step)
         : current,
     );
@@ -624,7 +593,6 @@ export default function RegisterPage() {
         county:
           form.county.trim() || undefined,
 
-        password: form.password,
       };
 
       const response = await fetch(
@@ -657,7 +625,7 @@ export default function RegisterPage() {
         payload as RegistrationResponse,
       );
 
-      setStep(7);
+      setStep(6);
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
@@ -815,7 +783,7 @@ export default function RegisterPage() {
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#168DB8]">
-                    Step {step} of 7
+                    Step {step} of 6
                   </p>
 
                   <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
@@ -833,7 +801,7 @@ export default function RegisterPage() {
 
                     <span>
                       {Math.round(
-                        (step / 7) * 100,
+                        (step / 6) * 100,
                       )}
                       %
                     </span>
@@ -843,7 +811,7 @@ export default function RegisterPage() {
                     <div
                       className="h-full rounded-full bg-[#168DB8] transition-all"
                       style={{
-                        width: `${(step / 7) * 100}%`,
+                        width: `${(step / 6) * 100}%`,
                       }}
                     />
                   </div>
@@ -1254,45 +1222,60 @@ export default function RegisterPage() {
                 )}
 
                 {step === 5 && (
-                  <div className="mx-auto max-w-2xl">
-                    <div className="grid gap-5">
-                      <Field
-                        label="Password"
-                        required
-                        type="password"
-                        value={form.password}
-                        onChange={(value) =>
-                          updateField(
-                            "password",
-                            value,
-                          )
-                        }
-                        placeholder="At least 8 characters"
+                  <div className="mx-auto max-w-3xl">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
+                      Final review
+                    </p>
+
+                    <h2 className="mt-2 text-3xl font-black tracking-tight">
+                      Review your registration
+                    </h2>
+
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-black/50">
+                      Confirm your information before submitting your KUHRSA
+                      membership registration.
+                    </p>
+
+                    <div className="mt-7 grid gap-5 md:grid-cols-2">
+                      <ReviewCard
+                        title="Personal Information"
+                        rows={[
+                          [
+                            "Name",
+                            `${form.firstName} ${form.lastName}`,
+                          ],
+                          [
+                            "Category",
+                            getReadableCategory(form.category),
+                          ],
+                          [
+                            "Registration Number",
+                            form.registrationNumber || "—",
+                          ],
+                        ]}
                       />
 
-                      <Field
-                        label="Confirm Password"
-                        required
-                        type="password"
-                        value={
-                          form.confirmPassword
-                        }
-                        onChange={(value) =>
-                          updateField(
-                            "confirmPassword",
-                            value,
-                          )
-                        }
-                        placeholder="Re-enter your password"
+                      <ReviewCard
+                        title="Contact"
+                        rows={[
+                          ["Email", form.email],
+                          ["Phone", form.phone],
+                          ["County", form.county || "—"],
+                        ]}
                       />
+
+                      <div className="md:col-span-2">
+                        <ReviewCard
+                          title="Membership"
+                          rows={membershipRows}
+                        />
+                      </div>
                     </div>
 
                     <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-[#F4FAFC] p-4">
                       <input
                         type="checkbox"
-                        checked={
-                          form.acceptTerms
-                        }
+                        checked={form.acceptTerms}
                         onChange={(event) =>
                           updateField(
                             "acceptTerms",
@@ -1303,259 +1286,106 @@ export default function RegisterPage() {
                       />
 
                       <span className="text-sm leading-6 text-black/55">
-                        I confirm that the information
-                        provided is accurate and I agree
-                        to abide by the applicable KUHRSA
-                        membership terms and conditions.
+                        I confirm that the information provided is accurate and
+                        I agree to abide by the applicable KUHRSA terms,
+                        membership rules and registration requirements.
                       </span>
                     </label>
 
-                    <div className="mt-6 rounded-2xl border border-[#168DB8]/10 bg-white p-5 shadow-sm">
-                      <p className="text-sm font-black">
-                        Your account remains pending
+                    <div className="mt-6 rounded-3xl border border-[#168DB8]/10 bg-[#F4FAFC] p-5">
+                      <p className="text-sm font-black text-[#0B2633]">
+                        Activation comes next
                       </p>
 
                       <p className="mt-2 text-sm leading-6 text-black/50">
-                        Completing registration creates
-                        your KUHRSA membership and account
-                        records, but does not mark your
-                        membership as active or your fees
-                        as paid.
+                        Registration does not create your password or process
+                        payment. After submitting, use the Login page to
+                        activate your membership and create your account
+                        password.
                       </p>
                     </div>
                   </div>
                 )}
 
-                {step === 6 && (
-                  <div className="space-y-6">
-                    <div className="grid gap-5 md:grid-cols-2">
-                      <ReviewCard
-                        title="Membership Category"
-                        rows={[
-                          [
-                            "Category",
-                            getReadableCategory(
-                              form.category,
-                            ),
-                          ],
-                        ]}
+                {step === 6 && registration && (
+                  <div className="mx-auto max-w-3xl">
+                    <div className="text-center">
+                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF7FB] text-2xl text-[#168DB8]">
+                        ✓
+                      </div>
+
+                      <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
+                        Registration submitted
+                      </p>
+
+                      <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+                        Welcome to KUHRSA
+                      </h2>
+
+                      <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-black/50">
+                        Your membership registration has been received
+                        successfully. Your next step is to activate your
+                        membership and create your KUHRSA account password.
+                      </p>
+                    </div>
+
+                    <div className="mt-8 grid gap-5 md:grid-cols-2">
+                      <StatusCard
+                        label="Member Number"
+                        value={registration.member.memberNumber}
                       />
 
-                      <ReviewCard
-                        title="Personal"
-                        rows={[
-                          [
-                            "Name",
-                            `${form.firstName} ${form.lastName}`,
-                          ],
-                        ]}
+                      <StatusCard
+                        label="Membership Category"
+                        value={getReadableCategory(form.category)}
                       />
 
-                      <ReviewCard
-                        title="Membership Details"
-                        rows={membershipRows}
+                      <StatusCard
+                        label="Registration Status"
+                        value={registration.member.status}
                       />
 
-                      <ReviewCard
-                        title="Contact"
-                        rows={[
-                          [
-                            "Email",
-                            form.email,
-                          ],
-                          [
-                            "Phone",
-                            form.phone,
-                          ],
-                          [
-                            "Address",
-                            form.address || "—",
-                          ],
-                          [
-                            "County",
-                            form.county || "—",
-                          ],
-                        ]}
+                      <StatusCard
+                        label="Account Status"
+                        value={registration.user.status}
+                      />
+
+                      <StatusCard
+                        label="Membership Period"
+                        value={registration.membership.membershipYear}
                       />
                     </div>
 
-                    <div className="rounded-3xl bg-[#0B2633] p-6 text-white">
-                      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#5CC7E6]">
-                            Membership fees
-                          </p>
+                    <div className="mt-6 rounded-3xl border border-[#168DB8]/10 bg-white p-6 text-center shadow-sm">
+                      <p className="text-sm font-black text-[#0B2633]">
+                        Next: Activate your membership
+                      </p>
 
-                          <h3 className="mt-2 text-xl font-black">
-                            Amount due
-                          </h3>
+                      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-black/50">
+                        Go to Login and select Activate Membership. Your
+                        registration has already been recorded, so you do not
+                        need to register again.
+                      </p>
 
-                          <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
-                            Payment has not been completed
-                            by registration. The backend
-                            records the required payment as
-                            pending.
-                          </p>
-                        </div>
-
-                        <div className="text-left sm:text-right">
-                          <div className="text-3xl font-black">
-                            KSh{" "}
-                            {formatAmount(
-                              totalAmount,
-                            )}
-                          </div>
-
-                          <div className="mt-1 text-xs font-semibold text-white/45">
-                            KSh 250 registration + KSh
-                            200 annual membership
-                          </div>
-                        </div>
+                      <div className="mt-5">
+                        <Link
+                          href="/login"
+                          className="inline-flex rounded-full bg-[#0B2633] px-6 py-3 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8]"
+                        >
+                          Go to Login &amp; Activate
+                        </Link>
                       </div>
                     </div>
                   </div>
                 )}
-
-                {step === 7 &&
-                  registration && (
-                    <div className="mx-auto max-w-3xl">
-                      <div className="text-center">
-                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#EAF7FB] text-2xl text-[#168DB8]">
-                          ✓
-                        </div>
-
-                        <p className="mt-5 text-[10px] font-black uppercase tracking-[0.2em] text-[#168DB8]">
-                          Registration submitted
-                        </p>
-
-                        <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
-                          Welcome to KUHRSA
-                        </h2>
-
-                        <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-black/50">
-                          Your registration has been
-                          received successfully. Your
-                          membership and account remain
-                          pending until the KUHRSA processing
-                          workflow is completed.
-                        </p>
-                      </div>
-
-                      <div className="mt-8 grid gap-5 md:grid-cols-2">
-                        <StatusCard
-                          label="Member Number"
-                          value={
-                            registration.member
-                              .memberNumber
-                          }
-                        />
-
-                        <StatusCard
-                          label="Membership Category"
-                          value={getReadableCategory(
-                            form.category,
-                          )}
-                        />
-
-                        <StatusCard
-                          label="Registration Status"
-                          value={
-                            registration.member
-                              .status
-                          }
-                        />
-
-                        <StatusCard
-                          label="Account Status"
-                          value={
-                            registration.user
-                              .status
-                          }
-                        />
-
-                        <StatusCard
-                          label="Membership Period"
-                          value={
-                            registration.membership
-                              .membershipYear
-                          }
-                        />
-
-                        <StatusCard
-                          label="Payment Status"
-                          value={
-                            registration.payment
-                              .status
-                          }
-                        />
-                      </div>
-
-                      <div className="mt-5 rounded-3xl border border-black/5 bg-[#F4FAFC] p-6">
-                        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
-                          <div>
-                            <p className="text-sm font-black">
-                              Payment pending
-                            </p>
-
-                            <p className="mt-1 text-sm leading-6 text-black/50">
-                              Your registration created the
-                              payment obligation, but it did
-                              not mark the fees as paid.
-                            </p>
-                          </div>
-
-                          <div className="shrink-0 rounded-2xl bg-white px-5 py-4 shadow-sm">
-                            <p className="text-[10px] font-black uppercase tracking-wide text-black/40">
-                              Amount due
-                            </p>
-
-                            <p className="mt-1 text-xl font-black text-[#0B2633]">
-                              KSh{" "}
-                              {formatAmount(
-                                registration.payment
-                                  .total,
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-6 rounded-3xl border border-[#168DB8]/10 bg-white p-6 text-center shadow-sm">
-                        <p className="text-sm font-black">
-                          What happens next?
-                        </p>
-
-                        <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-black/50">
-                          KUHRSA can now process your
-                          registration, payment and
-                          membership activation through the
-                          administration workflow. You will
-                          access the member portal once your
-                          account is activated.
-                        </p>
-
-                        <div className="mt-5">
-                          <Link
-                            href="/login"
-                            className="inline-flex rounded-full bg-[#0B2633] px-6 py-3 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8]"
-                          >
-                            Go to Login
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
               </div>
 
-              {step < 7 && (
+              {step < 6 && (
                 <div className="flex flex-col-reverse gap-3 border-t border-black/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
                   <button
                     type="button"
                     onClick={goBack}
-                    disabled={
-                      step === 1 ||
-                      submitting
-                    }
+                    disabled={step === 1 || submitting}
                     className="rounded-full border border-black/10 px-6 py-3 text-xs font-black uppercase tracking-wide text-[#0B2633] transition hover:border-[#168DB8] hover:text-[#168DB8] disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     Back
@@ -1566,9 +1396,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (
-                            validateStep(5)
-                          ) {
+                          if (validateStep(5)) {
                             setStep(6);
                           }
                         }}

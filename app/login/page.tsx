@@ -24,10 +24,6 @@ type ActivationStep =
   | 4
   | 5;
 
-type MembershipPaymentStatus =
-  | "PAID"
-  | "DUE";
-
 type ActivationLookupResponse = {
   exists: boolean;
   eligible: boolean;
@@ -59,6 +55,10 @@ type ActivationVerificationResponse = {
     memberNumber: string;
     category: string;
     activationStatus: string;
+  };
+  payment: {
+    required: boolean;
+    reason: "INITIAL_REGISTRATION" | "EXISTING_MEMBER";
   };
 };
 
@@ -103,11 +103,11 @@ const activationSteps = [
   },
   {
     number: 3,
-    label: "Account",
+    label: "Payment",
   },
   {
     number: 4,
-    label: "Payment",
+    label: "Account",
   },
   {
     number: 5,
@@ -237,12 +237,14 @@ export default function LoginPage() {
   ] = useState("");
 
   const [
-    membershipPaymentStatus,
-    setMembershipPaymentStatus,
-  ] =
-    useState<MembershipPaymentStatus>(
-      "DUE",
-    );
+    paymentRequired,
+    setPaymentRequired,
+  ] = useState(false);
+
+  const [
+    paymentStepCompleted,
+    setPaymentStepCompleted,
+  ] = useState(false);
 
   const [
     activationToken,
@@ -317,7 +319,8 @@ export default function LoginPage() {
     setActivationToken("");
     setActivationRecord(null);
     setActivationResult(null);
-    setMembershipPaymentStatus("DUE");
+    setPaymentRequired(false);
+    setPaymentStepCompleted(false);
   };
 
   const handleMemberLogin = async (
@@ -417,7 +420,7 @@ export default function LoginPage() {
       }
     }
 
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       if (
         !activation.password ||
         !activation.confirmPassword
@@ -445,8 +448,8 @@ export default function LoginPage() {
     }
 
     if (
-      currentStep === 4 &&
-      membershipPaymentStatus === "DUE"
+      currentStep === 3 &&
+      paymentRequired && !paymentStepCompleted
     ) {
       if (!activation.paymentMethod) {
         return "Please select a payment method.";
@@ -690,6 +693,14 @@ export default function LoginPage() {
           return false;
         }
 
+        setPaymentRequired(
+          result.payment.required,
+        );
+
+        setPaymentStepCompleted(
+          !result.payment.required,
+        );
+
         return true;
       } catch (error) {
         setActivationError(
@@ -709,7 +720,7 @@ export default function LoginPage() {
   const activateMembership =
     async () => {
       const error =
-        validateActivationStep(3);
+        validateActivationStep(4);
 
       if (error) {
         setActivationError(
@@ -836,7 +847,9 @@ export default function LoginPage() {
           return;
         }
 
-        setActivationStep(3);
+        setActivationStep(
+          paymentRequired ? 3 : 4,
+        );
 
         window.scrollTo({
           top: 0,
@@ -849,22 +862,8 @@ export default function LoginPage() {
       if (
         activationStep === 3
       ) {
-        if (activationResult) {
-          setActivationStep(4);
-
-          window.scrollTo({
-            top: 0,
-            behavior: "smooth",
-          });
-
-          return;
-        }
-
-        const activated =
-          await activateMembership();
-
-        if (!activated) {
-          return;
+        if (paymentRequired) {
+          setPaymentStepCompleted(true);
         }
 
         setActivationStep(4);
@@ -880,6 +879,26 @@ export default function LoginPage() {
       if (
         activationStep === 4
       ) {
+        const activated =
+          await activateMembership();
+
+        if (!activated) {
+          return;
+        }
+
+        setActivationStep(5);
+
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      if (
+        activationStep === 5
+      ) {
         completeActivation();
         return;
       }
@@ -893,9 +912,18 @@ export default function LoginPage() {
         activationStep > 1
       ) {
         setActivationStep(
-          (current) =>
-            (current -
-              1) as ActivationStep,
+          (current) => {
+            if (
+              current === 4 &&
+              !paymentRequired
+            ) {
+              return 2;
+            }
+
+            return (
+              current - 1
+            ) as ActivationStep;
+          },
         );
 
         window.scrollTo({
@@ -908,35 +936,12 @@ export default function LoginPage() {
   const completeActivation = () => {
     if (!activationResult) {
       setActivationError(
-        "Your KUHRSA account has not been activated by the system yet.",
+        "Your activation has not completed yet. Please finish the activation steps.",
       );
       return;
     }
 
-    const error =
-      validateActivationStep(4);
-
-    if (error) {
-      setActivationError(
-        error,
-      );
-      return;
-    }
-
-    /*
-     * Payment remains a frontend placeholder
-     * until Finance / M-Pesa integration is implemented.
-     */
-    setActivationError("");
-    setMembershipPaymentStatus(
-      "PAID",
-    );
     setActivationStep(5);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
   };
 
   const fullName =
@@ -954,9 +959,6 @@ export default function LoginPage() {
       ],
     );
 
-  const paymentRequired =
-    membershipPaymentStatus ===
-    "DUE";
 
   return (
     <main className="min-h-screen bg-[#F4FAFC] px-5 py-12 sm:py-16">
@@ -1459,6 +1461,118 @@ export default function LoginPage() {
                       </p>
 
                       <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
+                        Complete payment.
+                      </h2>
+
+                      {paymentRequired ? (
+                        <>
+                          <p className="mt-3 text-sm leading-6 text-black/55">
+                            Your membership record requires the applicable
+                            registration payment before account activation
+                            can be completed.
+                          </p>
+
+                          <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+                              Payment setup
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-amber-900/70">
+                              Payment processing is currently being connected
+                              to the KUHRSA Finance and M-Pesa service.
+                              This screen records the payment method for the
+                              activation flow but does not confirm a real
+                              transaction yet.
+                            </p>
+                          </div>
+
+                          <div className="mt-6 grid gap-5">
+                            <div>
+                              <label className="mb-2 block text-sm font-bold text-[#0B2633]">
+                                Payment Method
+                              </label>
+
+                              <select
+                                value={
+                                  activation.paymentMethod
+                                }
+                                onChange={(event) =>
+                                  updateActivation(
+                                    "paymentMethod",
+                                    event.target.value,
+                                  )
+                                }
+                                className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm text-[#0B2633] outline-none transition focus:border-[#F700BA]"
+                              >
+                                <option value="">
+                                  Select payment method
+                                </option>
+                                <option value="M-Pesa">
+                                  M-Pesa
+                                </option>
+                                <option value="Manual">
+                                  Manual Payment
+                                </option>
+                              </select>
+                            </div>
+
+                            {activation.paymentMethod ===
+                              "M-Pesa" && (
+                              <Field
+                                label="M-Pesa Number"
+                                type="tel"
+                                value={
+                                  activation.mpesaNumber
+                                }
+                                onChange={(value) =>
+                                  updateActivation(
+                                    "mpesaNumber",
+                                    value,
+                                  )
+                                }
+                                placeholder="e.g. 07XXXXXXXX"
+                              />
+                            )}
+                          </div>
+
+                          <div className="mt-7 rounded-2xl bg-[#F9F4FC] p-4">
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
+                              Development Status
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-black/55">
+                              Selecting the payment details allows you to
+                              continue through the development activation
+                              flow. A successful M-Pesa transaction will be
+                              enforced when the Finance integration is
+                              connected.
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
+                            Payment Not Required
+                          </p>
+
+                          <p className="mt-2 text-sm leading-6 text-black/55">
+                            Your membership record does not require an
+                            initial registration payment. You may continue
+                            directly to account creation.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activationStep ===
+                    4 && (
+                    <div className="mt-8">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
+                        Step 4
+                      </p>
+
+                      <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
                         Create your account.
                       </h2>
 
@@ -1526,8 +1640,7 @@ export default function LoginPage() {
                           ) =>
                             updateActivation(
                               "acceptTerms",
-                              event.target
-                                .checked,
+                              event.target.checked,
                             )
                           }
                           className="mt-1 h-4 w-4 rounded border-black/20 accent-[#F700BA]"
@@ -1542,104 +1655,15 @@ export default function LoginPage() {
 
                       <div className="mt-7 rounded-2xl bg-[#F9F4FC] p-4">
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
-                          Membership Status
+                          Membership Activation
                         </p>
 
                         <p className="mt-2 text-sm leading-6 text-black/55">
-                          {activationResult
-                            ? "Your KUHRSA account has been activated successfully by the system."
-                            : "Create your password and continue. KUHRSA will activate your account through the secure membership activation service."}
+                          Your account will be activated through the secure
+                          KUHRSA membership activation service after you
+                          submit your account details.
                         </p>
                       </div>
-                    </div>
-                  )}
-
-                  {activationStep ===
-                    4 && (
-                    <div className="mt-8">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#CE26A4]">
-                        Step 4
-                      </p>
-
-                      <h2 className="mt-2 text-2xl font-black text-[#0B2633]">
-                        Complete payment.
-                      </h2>
-
-                      {paymentRequired ? (
-                        <>
-                          <p className="mt-3 text-sm leading-6 text-black/55">
-                            Complete the required membership payment before
-                            your activation process can be completed.
-                          </p>
-
-                          {activationResult && (
-                            <div className="mt-6 rounded-2xl border border-green-100 bg-green-50 p-4">
-                              <p className="text-xs font-black uppercase tracking-[0.16em] text-green-700">
-                                Account Activation
-                              </p>
-
-                              <p className="mt-2 text-sm leading-6 text-green-800">
-                                Your KUHRSA account has been activated
-                                successfully. The payment section below is
-                                still using the development placeholder until
-                                Finance and M-Pesa integration is connected.
-                              </p>
-                            </div>
-                          )}
-
-                          <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
-                              Payment
-                            </p>
-
-                            <div className="mt-4 grid gap-5">
-                              <Field
-                                label="Payment Method"
-                                value={
-                                  activation.paymentMethod
-                                }
-                                onChange={(
-                                  value,
-                                ) =>
-                                  updateActivation(
-                                    "paymentMethod",
-                                    value,
-                                  )
-                                }
-                                placeholder="M-Pesa"
-                              />
-
-                              <Field
-                                label="M-Pesa Number"
-                                type="tel"
-                                value={
-                                  activation.mpesaNumber
-                                }
-                                onChange={(
-                                  value,
-                                ) =>
-                                  updateActivation(
-                                    "mpesaNumber",
-                                    value,
-                                  )
-                                }
-                                placeholder="07XXXXXXXX"
-                              />
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="mt-6 rounded-2xl bg-[#F9F4FC] p-5">
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#CE26A4]">
-                            Payment Status
-                          </p>
-
-                          <p className="mt-3 text-sm leading-6 text-black/55">
-                            Your membership payment is already up to date.
-                            No additional payment is required.
-                          </p>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -1734,15 +1758,17 @@ export default function LoginPage() {
                               ? "Verifying..."
                               : activationStep ===
                                   3
-                                ? "Activating Account..."
-                                : "Completing..."
+                                ? "Processing Payment..."
+                                : activationStep ===
+                                    4
+                                  ? "Creating Account..."
+                                  : "Processing..."
                           : activationStep ===
-                              3 &&
-                            !activationResult
-                            ? "Create Account"
+                              3
+                            ? "Continue to Account"
                             : activationStep ===
                                 4
-                              ? "Complete Activation"
+                              ? "Create Account"
                               : "Continue"}
                       </button>
                     </div>
