@@ -35,6 +35,7 @@ type MemberActivationStatus =
 
 type MemberSource =
   | "REGISTRATION"
+  | "MANUAL_ENTRY"
   | "MIGRATION_IMPORT"
   | "MIGRATION_MANUAL";
 
@@ -42,6 +43,29 @@ type Member = {
   id: string;
   organizationId: string;
   category: MemberCategory;
+
+  constitutionalCategory:
+    | "ORDINARY"
+    | "ASSOCIATE"
+    | "ALUMNI"
+    | "HONORARY";
+
+  goodStandingStatus:
+    | "GOOD_STANDING"
+    | "NOT_IN_GOOD_STANDING"
+    | "EXTENSION_GRANTED";
+
+  financialStatus:
+    | "PAID"
+    | "PARTIALLY_PAID"
+    | "UNPAID"
+    | "EXTENSION_GRANTED"
+    | "OVERDUE";
+
+  disciplinaryStatus:
+    | "CLEAR"
+    | "UNDER_REVIEW"
+    | "SANCTIONED";
 
   registrationNumber: string | null;
   admissionNumber: string | null;
@@ -385,6 +409,9 @@ function sourceLabel(
       return "Bulk Migration";
 
     case "MIGRATION_MANUAL":
+      return "Manual Entry";
+
+    case "MANUAL_ENTRY":
       return "Manual Entry";
 
     case "REGISTRATION":
@@ -1304,26 +1331,92 @@ export default function MembersWorkspace() {
     try {
       const payload: Record<
         string,
-        string
+        string | number | null
       > = {};
 
       const registrationNumber =
         form.registrationNumber.trim();
+
+      const nationalId =
+        form.nationalId.trim();
+
+      const graduationYear =
+        form.graduationYear.trim();
+
+      const yearOfStudy =
+        form.yearOfStudy.trim();
+
+      const programme =
+        form.programme.trim();
+
+      const staffNumber =
+        form.staffNumber.trim();
+
+      const position =
+        form.position.trim();
+
+      const faculty =
+        form.faculty.trim();
+
+      const department =
+        form.department.trim();
 
       const email =
         form.email
           .trim()
           .toLowerCase();
 
-      if (registrationNumber) {
-        payload.registrationNumber =
-          registrationNumber;
-      }
+      const phone =
+        form.phone.trim();
 
-      if (email) {
-        payload.email =
-          email;
-      }
+      const address =
+        form.address.trim();
+
+      const county =
+        form.county.trim();
+
+      payload.registrationNumber =
+        registrationNumber || null;
+
+      payload.nationalId =
+        nationalId || null;
+
+      payload.graduationYear =
+        graduationYear
+          ? Number(graduationYear)
+          : null;
+
+      payload.yearOfStudy =
+        yearOfStudy
+          ? Number(yearOfStudy)
+          : null;
+
+      payload.programme =
+        programme || null;
+
+      payload.staffNumber =
+        staffNumber || null;
+
+      payload.position =
+        position || null;
+
+      payload.faculty =
+        faculty || null;
+
+      payload.department =
+        department || null;
+
+      payload.email =
+        email || null;
+
+      payload.phone =
+        phone || null;
+
+      payload.address =
+        address || null;
+
+      payload.county =
+        county || null;
 
       const updated =
         await apiRequest<Member>(
@@ -3087,7 +3180,7 @@ function MemberFormPanel({
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-black/45">
               {editingMember
-                ? "The current member update API supports changing the registration/admission identifier and linked account email. Additional profile-field editing can be enabled as the backend update contract expands."
+                ? "Edit the membership record using the fields supported by the current member update API. Category and personal identity remain controlled by the original member record."
                 : "Create a complete member record. The backend generates the permanent KUHRSA member number and creates the linked MEMBER account."}
             </p>
           </div>
@@ -3275,12 +3368,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
               >
                 <option value="">
                   Select year
@@ -3317,12 +3405,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="BSc Human Resource Management"
               />
 
@@ -3340,12 +3423,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Faculty or School"
               />
 
@@ -3363,12 +3441,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Department"
               />
             </div>
@@ -3391,12 +3464,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="National ID number"
               />
 
@@ -3431,12 +3499,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
               >
                 <option value="">
                   Select year
@@ -3487,12 +3550,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Programme studied"
               />
 
@@ -3510,12 +3568,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Faculty or School"
               />
 
@@ -3533,12 +3586,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Department"
               />
             </div>
@@ -3561,12 +3609,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="STAFF-0001"
               />
 
@@ -3584,12 +3627,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Lecturer"
               />
 
@@ -3607,12 +3645,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Faculty or School"
               />
 
@@ -3630,12 +3663,7 @@ function MemberFormPanel({
                     value,
                   )
                 }
-                disabled={
-                  busy ||
-                  Boolean(
-                    editingMember,
-                  )
-                }
+                disabled={busy}
                 placeholder="Department"
               />
             </div>
@@ -3682,12 +3710,7 @@ function MemberFormPanel({
                   value,
                 )
               }
-              disabled={
-                busy ||
-                Boolean(
-                  editingMember,
-                )
-              }
+              disabled={busy}
               placeholder="07XXXXXXXX"
             />
 
@@ -3704,12 +3727,7 @@ function MemberFormPanel({
                   value,
                 )
               }
-              disabled={
-                busy ||
-                Boolean(
-                  editingMember,
-                )
-              }
+              disabled={busy}
               placeholder="County"
             />
 
@@ -3726,12 +3744,7 @@ function MemberFormPanel({
                   value,
                 )
               }
-              disabled={
-                busy ||
-                Boolean(
-                  editingMember,
-                )
-              }
+              disabled={busy}
               placeholder="Address"
             />
           </div>
@@ -3786,9 +3799,11 @@ function MemberFormPanel({
             className="rounded-xl bg-[#168DB8] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#168DB8]/15 hover:bg-[#11799D] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy
-              ? "Saving Member..."
+              ? editingMember
+                ? "Saving Changes..."
+                : "Creating Member..."
               : editingMember
-                ? "Save Supported Changes"
+                ? "Save Member Changes"
                 : "Create Member Record"}
           </button>
         </div>
