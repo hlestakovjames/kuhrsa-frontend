@@ -102,6 +102,7 @@ type Member = {
   user: {
     id: string;
     firstName: string | null;
+    middleName: string | null;
     lastName: string | null;
     email: string;
     status: string;
@@ -113,6 +114,7 @@ type MemberForm = {
   category: MemberCategory;
 
   firstName: string;
+  middleName: string;
   lastName: string;
 
   registrationNumber: string;
@@ -173,6 +175,7 @@ type MigrationRow = {
   category: MemberCategory | null;
 
   firstName: string | null;
+  middleName: string | null;
   lastName: string | null;
 
   registrationNumber: string | null;
@@ -224,6 +227,7 @@ const EMPTY_FORM: MemberForm = {
   category: "STUDENT",
 
   firstName: "",
+  middleName: "",
   lastName: "",
 
   registrationNumber: "",
@@ -284,6 +288,7 @@ function getMemberName(
 ) {
   const name = [
     member.user?.firstName,
+    member.user?.middleName,
     member.user?.lastName,
   ]
     .filter(
@@ -938,6 +943,10 @@ export default function MembersWorkspace() {
         member.user?.firstName ??
         "",
 
+      middleName:
+        member.user?.middleName ??
+        "",
+
       lastName:
         member.user?.lastName ??
         "",
@@ -1177,6 +1186,9 @@ export default function MembersWorkspace() {
 
         firstName:
           form.firstName.trim(),
+
+        middleName:
+          form.middleName.trim() || null,
 
         lastName:
           form.lastName.trim(),
@@ -2673,14 +2685,16 @@ function MemberDetails({
               </h2>
 
               <p className="mt-1 text-sm font-black text-[#168DB8]">
-                {
-                  member.memberNumber
-                }
+                {member.memberNumber}
               </p>
 
               <p className="mt-1 text-xs text-black/40">
                 {formatCategory(
                   member.category,
+                )}
+                {" · "}
+                {formatStatus(
+                  member.constitutionalCategory,
                 )}
               </p>
 
@@ -2736,28 +2750,23 @@ function MemberDetails({
           />
 
           <ProfileMetric
-            label="Activation"
+            label="Good Standing"
             value={formatStatus(
-              member.activationStatus,
+              member.goodStandingStatus,
             )}
           />
 
           <ProfileMetric
-            label="Account"
-            value={
-              member.user
-                ? formatStatus(
-                    member.user
-                      .status,
-                  )
-                : "Not Linked"
-            }
+            label="Financial"
+            value={formatStatus(
+              member.financialStatus,
+            )}
           />
         </section>
 
         <ProfileSection
-          title="Identity"
-          description="Core membership identifiers and category information."
+          title="Identity & Membership"
+          description="Core identity, membership identifiers, and constitutional classification."
         >
           <ProfileField
             label="Full Name"
@@ -2772,16 +2781,31 @@ function MemberDetails({
           />
 
           <ProfileField
-            label="Category"
+            label="Portal Category"
             value={formatCategory(
               member.category,
             )}
           />
 
           <ProfileField
-            label="Registration / Admission Number"
+            label="Constitutional Category"
+            value={formatStatus(
+              member.constitutionalCategory,
+            )}
+          />
+
+          <ProfileField
+            label="Registration Number"
             value={
               member.registrationNumber ??
+              "Not provided"
+            }
+          />
+
+          <ProfileField
+            label="Admission Number"
+            value={
+              member.admissionNumber ??
               "Not provided"
             }
           />
@@ -2834,6 +2858,46 @@ function MemberDetails({
         </ProfileSection>
 
         <ProfileSection
+          title="Membership Standing"
+          description="Current lifecycle, activation, compliance, financial, and disciplinary states."
+        >
+          <ProfileField
+            label="Lifecycle Status"
+            value={formatStatus(
+              member.status,
+            )}
+          />
+
+          <ProfileField
+            label="Activation Status"
+            value={formatStatus(
+              member.activationStatus,
+            )}
+          />
+
+          <ProfileField
+            label="Good Standing"
+            value={formatStatus(
+              member.goodStandingStatus,
+            )}
+          />
+
+          <ProfileField
+            label="Financial Status"
+            value={formatStatus(
+              member.financialStatus,
+            )}
+          />
+
+          <ProfileField
+            label="Disciplinary Status"
+            value={formatStatus(
+              member.disciplinaryStatus,
+            )}
+          />
+        </ProfileSection>
+
+        <ProfileSection
           title="Academic & Professional"
           description="The academic or professional context associated with the membership."
         >
@@ -2866,6 +2930,14 @@ function MemberDetails({
             label="Department"
             value={
               member.department ??
+              "Not provided"
+            }
+          />
+
+          <ProfileField
+            label="Professional Position"
+            value={
+              member.position ??
               "Not provided"
             }
           />
@@ -2910,23 +2982,9 @@ function MemberDetails({
         </ProfileSection>
 
         <ProfileSection
-          title="Membership Lifecycle"
-          description="System-controlled membership state and record history."
+          title="Record History"
+          description="System metadata showing how and when this membership record was created and updated."
         >
-          <ProfileField
-            label="Member Status"
-            value={formatStatus(
-              member.status,
-            )}
-          />
-
-          <ProfileField
-            label="Activation Status"
-            value={formatStatus(
-              member.activationStatus,
-            )}
-          />
-
           <ProfileField
             label="Source"
             value={sourceLabel(
@@ -2958,8 +3016,7 @@ function MemberDetails({
             value={
               member.user
                 ? formatStatus(
-                    member.user
-                      .status,
+                    member.user.status,
                   )
                 : "Not linked"
             }
@@ -2968,8 +3025,7 @@ function MemberDetails({
           <ProfileField
             label="Account Email"
             value={
-              member.user
-                ?.email ??
+              member.user?.email ??
               "Not linked"
             }
           />
@@ -2985,8 +3041,7 @@ function MemberDetails({
           <ProfileField
             label="System Owner"
             value={
-              member.user
-                ?.isSystemOwner
+              member.user?.isSystemOwner
                 ? "Yes"
                 : "No"
             }
@@ -3002,7 +3057,7 @@ function MemberDetails({
             Membership state changes are processed by
             the backend and recorded in the KUHRSA audit
             trail. System-controlled identifiers such as
-            the member number should not be edited manually.
+            the member number are not edited manually.
           </p>
         </div>
 
@@ -3299,6 +3354,28 @@ function MemberFormPanel({
                 )
               }
               placeholder="First name"
+            />
+
+            <FormInput
+              label="Middle Name"
+              value={
+                form.middleName
+              }
+              onChange={(
+                value,
+              ) =>
+                field(
+                  "middleName",
+                  value,
+                )
+              }
+              disabled={
+                busy ||
+                Boolean(
+                  editingMember,
+                )
+              }
+              placeholder="Middle name (optional)"
             />
 
             <FormInput
@@ -4246,7 +4323,7 @@ function MigrationWorkspace({
               </div>
             </div>
 
-            <div className="grid gap-px bg-black/5 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-px bg-black/5 sm:grid-cols-2 lg:grid-cols-6">
               <MigrationStat
                 label="Total"
                 value={
@@ -4288,6 +4365,13 @@ function MigrationWorkspace({
                 negative={
                   migrationBatch.failedRows >
                   0
+                }
+              />
+
+              <MigrationStat
+                label="Skipped"
+                value={
+                  migrationBatch.skippedRows
                 }
               />
             </div>
@@ -4340,7 +4424,7 @@ function MigrationWorkspace({
                   >
                     {migrationImporting
                       ? "Importing..."
-                      : "Import Valid Records"}
+                      : "Import Validated Batch"}
                   </button>
                 </div>
               </div>
@@ -4439,6 +4523,7 @@ function MigrationWorkspace({
                             <p className="text-sm font-bold text-[#0B2633]">
                               {[
                                 row.firstName,
+                                row.middleName,
                                 row.lastName,
                               ]
                                 .filter(
@@ -4516,9 +4601,33 @@ function MigrationWorkspace({
                                   }
                                 </p>
                               </div>
-                            ) : (
+                            ) : row.status === "VALID" ? (
                               <span className="text-xs font-semibold text-emerald-600">
                                 Ready for import
+                              </span>
+                            ) : row.status === "IMPORTED" ? (
+                              <div>
+                                <p className="text-xs font-black text-blue-700">
+                                  Imported successfully
+                                </p>
+
+                                {row.memberNumber && (
+                                  <p className="mt-1 text-[11px] font-semibold text-black/40">
+                                    Member No. {row.memberNumber}
+                                  </p>
+                                )}
+                              </div>
+                            ) : row.status === "SKIPPED" ? (
+                              <span className="text-xs font-semibold text-slate-500">
+                                Skipped
+                              </span>
+                            ) : row.status === "FAILED" ? (
+                              <span className="text-xs font-semibold text-rose-600">
+                                Import failed
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-black/35">
+                                Awaiting validation
                               </span>
                             )}
                           </td>
@@ -4530,15 +4639,49 @@ function MigrationWorkspace({
               </div>
             )}
 
-            {migrationBatch.status !==
-              "VALIDATED" &&
-              migrationBatch.status !==
-                "COMPLETED" &&
-              migrationBatch.status !==
-                "COMPLETED_WITH_ERRORS" && (
+            {migrationBatch.status ===
+              "VALIDATED" && (
+              <div className="border-t border-black/5 bg-emerald-50 px-6 py-4 text-sm font-semibold text-emerald-700">
+                All migration rows passed validation. The batch is ready to import.
+              </div>
+            )}
+
+            {(migrationBatch.status ===
+              "UPLOADED" ||
+              migrationBatch.status ===
+                "VALIDATING" ||
+              migrationBatch.status ===
+                "IMPORTING") && (
               <div className="border-t border-black/5 bg-[#FFFCF5] px-6 py-4 text-sm text-amber-700">
-                Import becomes available only after the
-                backend reports the batch as fully validated.
+                Import becomes available only after the backend reports the entire batch as fully validated.
+              </div>
+            )}
+
+            {migrationBatch.status ===
+              "COMPLETED" && (
+              <div className="border-t border-black/5 bg-emerald-50 px-6 py-4 text-sm font-semibold text-emerald-700">
+                Migration completed successfully. Imported members are now in the membership registry.
+              </div>
+            )}
+
+            {migrationBatch.status ===
+              "COMPLETED_WITH_ERRORS" && (
+              <div className="border-t border-black/5 bg-amber-50 px-6 py-4 text-sm font-semibold text-amber-700">
+                Migration completed with errors. Review the failed rows and download the migration report for details.
+              </div>
+            )}
+
+            {migrationBatch.status ===
+              "FAILED" && (
+              <div className="border-t border-black/5 bg-rose-50 px-6 py-4 text-sm font-semibold text-rose-700">
+                Migration failed. Review the row errors and download the migration report for details.
+              </div>
+            )}
+
+            {migrationBatch.status ===
+              "CANCELLED" && (
+              <div className="border-t border-black/5 bg-slate-100 px-6 py-4 text-sm font-semibold text-slate-600">
+                This migration batch was cancelled and cannot be imported.
               </div>
             )}
           </section>
