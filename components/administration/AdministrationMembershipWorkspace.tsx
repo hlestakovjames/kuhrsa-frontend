@@ -1,6 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  getToken,
+  logout,
+} from "@/lib/auth";
 
 type MembershipView =
   | "dashboard"
@@ -24,117 +35,204 @@ type Props = {
   view: MembershipView;
 };
 
-const stats = [
-  {
-    label: "Total Members",
-    value: "1,284",
-  },
-  {
-    label: "Students",
-    value: "926",
-  },
-  {
-    label: "Alumni",
-    value: "218",
-  },
-  {
-    label: "Lecturers",
-    value: "140",
-  },
-  {
-    label: "Pending Applications",
-    value: "36",
-  },
-  {
-    label: "Active Members",
-    value: "1,172",
-  },
-];
+type MemberCategory =
+  | "STUDENT"
+  | "ALUMNI"
+  | "LECTURER";
 
-const members = [
-  {
-    name: "Alex Morgan",
-    number: "KUHRSA-STD-0042",
-    category: "Student",
-    status: "Active",
-    period: "2026/27",
-  },
-  {
-    name: "Brian Otieno",
-    number: "KUHRSA-STD-0077",
-    category: "Student",
-    status: "Active",
-    period: "2026/27",
-  },
-  {
-    name: "Cynthia Wambui",
-    number: "KUHRSA-ALU-0018",
-    category: "Alumni",
-    status: "Active",
-    period: "2026/27",
-  },
-  {
-    name: "Daniel Kariuki",
-    number: "KUHRSA-LCT-0009",
-    category: "Lecturer",
-    status: "Active",
-    period: "2026/27",
-  },
-  {
-    name: "Esther Njeri",
-    number: "KUHRSA-STD-0114",
-    category: "Student",
-    status: "Pending",
-    period: "2026/27",
-  },
-];
+type MemberStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "INACTIVE"
+  | "SUSPENDED"
+  | "ARCHIVED";
 
-const pending = [
-  {
-    name: "Grace M.",
-    category: "Student",
-    submitted: "02 Sep 2026",
-    status: "Pending Review",
-  },
-  {
-    name: "Ian K.",
-    category: "Student",
-    submitted: "03 Sep 2026",
-    status: "Pending Review",
-  },
-  {
-    name: "Jane W.",
-    category: "Alumni",
-    submitted: "04 Sep 2026",
-    status: "Documents Required",
-  },
-];
+type MemberActivationStatus =
+  | "NOT_REQUIRED"
+  | "PENDING"
+  | "COMPLETED"
+  | "EXPIRED";
 
-const requests = [
-  {
-    request: "Membership card replacement",
-    member: "KUHRSA-STD-0182",
-    status: "Open",
-  },
-  {
-    request: "Membership details update",
-    member: "KUHRSA-ALU-0031",
-    status: "Review",
-  },
-  {
-    request: "Membership verification",
-    member: "KUHRSA-STD-0221",
-    status: "Resolved",
-  },
-];
+type Member = {
+  id: string;
+  organizationId: string;
+  category: MemberCategory;
+  memberNumber: string | null;
+  registrationNumber: string | null;
+  admissionNumber: string | null;
+  yearOfStudy: number | null;
+  graduationYear: number | null;
+  programme: string | null;
+  faculty: string | null;
+  department: string | null;
+  position: string | null;
+  email: string | null;
+  phone: string | null;
+  status: MemberStatus;
+  activationStatus: MemberActivationStatus;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    firstName: string | null;
+    middleName: string | null;
+    lastName: string | null;
+    email: string;
+    status: string;
+    isSystemOwner: boolean;
+  } | null;
+};
 
-const history = [
-  "Membership period 2026/27 opened",
-  "18 members activated",
-  "12 membership cards issued",
-  "7 legacy records migrated",
-  "9 renewal applications processed",
-];
+type MembershipSummary = {
+  totalMembers: number;
+  activeMembers: number;
+  pendingMembers: number;
+  inactiveMembers: number;
+  suspendedMembers: number;
+  archivedMembers: number;
+
+  students: number;
+  alumni: number;
+  lecturers: number;
+
+  activationPending: number;
+  activationCompleted: number;
+  activationExpired: number;
+};
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(
+    /\/+$/,
+    "",
+  ) ?? "http://localhost:3001";
+
+function formatStatus(status: string) {
+  return status
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function formatCategory(
+  category: MemberCategory,
+) {
+  switch (category) {
+    case "STUDENT":
+      return "Student";
+
+    case "ALUMNI":
+      return "Alumni";
+
+    case "LECTURER":
+      return "Lecturer";
+  }
+}
+
+function getMemberName(
+  member: Member,
+) {
+  const name = [
+    member.user?.firstName,
+    member.user?.middleName,
+    member.user?.lastName,
+  ]
+    .filter(
+      (
+        value,
+      ): value is string =>
+        Boolean(value?.trim()),
+    )
+    .join(" ")
+    .trim();
+
+  return name || "Name not available";
+}
+
+function getMemberNumber(
+  member: Member,
+) {
+  return (
+    member.memberNumber ??
+    member.registrationNumber ??
+    member.admissionNumber ??
+    "Not assigned"
+  );
+}
+
+function statusClasses(
+  status: MemberStatus,
+) {
+  switch (status) {
+    case "ACTIVE":
+      return "bg-emerald-50 text-emerald-700 ring-emerald-600/10";
+
+    case "PENDING":
+      return "bg-amber-50 text-amber-700 ring-amber-600/10";
+
+    case "SUSPENDED":
+      return "bg-rose-50 text-rose-700 ring-rose-600/10";
+
+    case "INACTIVE":
+      return "bg-slate-100 text-slate-600 ring-slate-500/10";
+
+    case "ARCHIVED":
+      return "bg-zinc-100 text-zinc-600 ring-zinc-500/10";
+
+    default:
+      return "bg-slate-100 text-slate-600 ring-slate-500/10";
+  }
+}
+
+async function apiRequest<T>(
+  path: string,
+): Promise<T> {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error(
+      "Your session has expired. Please sign in again.",
+    );
+  }
+
+  const response = await fetch(
+    `${API_URL}${path}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  const data = await response
+    .json()
+    .catch(() => null);
+
+  if (response.status === 401) {
+    logout();
+
+    throw new Error(
+      "Your session has expired. Please sign in again.",
+    );
+  }
+
+  if (!response.ok) {
+    const message = Array.isArray(
+      data?.message,
+    )
+      ? data.message.join(", ")
+      : data?.message;
+
+    throw new Error(
+      message ||
+        "The request could not be completed.",
+    );
+  }
+
+  return data as T;
+}
 
 function Header({
   title,
@@ -165,7 +263,7 @@ function StatCard({
   value,
 }: {
   label: string;
-  value: string;
+  value: string | number;
 }) {
   return (
     <div className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-[0_6px_20px_rgba(11,38,51,0.03)]">
@@ -180,7 +278,11 @@ function StatCard({
   );
 }
 
-function StatusBadge({ value }: { value: string }) {
+function StatusBadge({
+  value,
+}: {
+  value: string;
+}) {
   const positive =
     value === "Active" ||
     value === "Resolved" ||
@@ -208,12 +310,74 @@ function StatusBadge({ value }: { value: string }) {
   );
 }
 
+function LoadingState() {
+  return (
+    <section className="rounded-3xl bg-white p-8 text-center ring-1 ring-black/[0.06]">
+      <p className="text-sm font-bold text-[#0B2633]">
+        Loading membership data…
+      </p>
+
+      <p className="mt-1 text-xs text-black/40">
+        Retrieving current records from the KUHRSA system.
+      </p>
+    </section>
+  );
+}
+
+function EmptyState({
+  title = "No membership records",
+  description = "There are currently no records available for this view.",
+}: {
+  title?: string;
+  description?: string;
+}) {
+  return (
+    <section className="rounded-3xl bg-white p-8 text-center ring-1 ring-black/[0.06]">
+      <p className="text-sm font-black text-[#0B2633]">
+        {title}
+      </p>
+
+      <p className="mt-1 text-xs text-black/40">
+        {description}
+      </p>
+    </section>
+  );
+}
+
+function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="rounded-3xl border border-rose-200 bg-rose-50 p-6">
+      <p className="text-sm font-black text-rose-800">
+        Unable to load membership data
+      </p>
+
+      <p className="mt-1 text-sm text-rose-700">
+        {message}
+      </p>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 rounded-xl bg-[#0B2633] px-4 py-2 text-xs font-black text-white"
+      >
+        Retry
+      </button>
+    </section>
+  );
+}
+
 function MemberTable({
   title,
-  data = members,
+  data,
 }: {
   title: string;
-  data?: typeof members;
+  data: Member[];
 }) {
   return (
     <section className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
@@ -224,7 +388,7 @@ function MemberTable({
           </h2>
 
           <p className="mt-1 text-sm text-black/40">
-            Synthetic administration records.
+            Live membership records from the KUHRSA system.
           </p>
         </div>
 
@@ -236,58 +400,173 @@ function MemberTable({
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left">
-          <thead>
-            <tr className="border-b border-black/[0.06]">
-              {[
-                "Member",
-                "Member Number",
-                "Category",
-                "Period",
-                "Status",
-              ].map((item) => (
-                <th
-                  key={item}
-                  className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-black/35 first:pl-0"
-                >
-                  {item}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.map((item) => (
-              <tr
-                key={item.number}
-                className="border-b border-black/[0.05] last:border-0"
-              >
-                <td className="px-3 py-4 text-sm font-black text-[#0B2633] first:pl-0">
-                  {item.name}
-                </td>
-                <td className="px-3 py-4 text-xs font-semibold text-black/55">
-                  {item.number}
-                </td>
-                <td className="px-3 py-4 text-xs font-semibold text-black/55">
-                  {item.category}
-                </td>
-                <td className="px-3 py-4 text-xs font-semibold text-black/55">
-                  {item.period}
-                </td>
-                <td className="px-3 py-4">
-                  <StatusBadge value={item.status} />
-                </td>
+      {data.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left">
+            <thead>
+              <tr className="border-b border-black/[0.06]">
+                {[
+                  "Member",
+                  "Member Number",
+                  "Category",
+                  "Status",
+                  "Activation",
+                ].map((item) => (
+                  <th
+                    key={item}
+                    className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-black/35 first:pl-0"
+                  >
+                    {item}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {data.map((item) => (
+                <tr
+                  key={item.id}
+                  className="border-b border-black/[0.05] last:border-0"
+                >
+                  <td className="px-3 py-4 first:pl-0">
+                    <p className="text-sm font-black text-[#0B2633]">
+                      {getMemberName(item)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-black/40">
+                      {item.email ??
+                        item.user?.email ??
+                        "Email not available"}
+                    </p>
+                  </td>
+
+                  <td className="px-3 py-4 text-xs font-semibold text-black/55">
+                    {getMemberNumber(item)}
+                  </td>
+
+                  <td className="px-3 py-4 text-xs font-semibold text-black/55">
+                    {formatCategory(item.category)}
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${statusClasses(item.status)}`}
+                    >
+                      {formatStatus(item.status)}
+                    </span>
+                  </td>
+
+                  <td className="px-3 py-4">
+                    <StatusBadge
+                      value={formatStatus(
+                        item.activationStatus,
+                      )}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
 
+function useMembershipData() {
+  const [summary, setSummary] =
+    useState<MembershipSummary | null>(
+      null,
+    );
+
+  const [members, setMembers] =
+    useState<Member[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const load = useCallback(
+    async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [
+          membershipSummary,
+          memberRecords,
+        ] = await Promise.all([
+          apiRequest<MembershipSummary>(
+            "/dashboard/administration/membership-summary",
+          ),
+          apiRequest<Member[]>(
+            "/members",
+          ),
+        ]);
+
+        setSummary(
+          membershipSummary,
+        );
+
+        setMembers(
+          memberRecords,
+        );
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Unable to load membership data.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return {
+    summary,
+    members,
+    loading,
+    error,
+    retry: load,
+  };
+}
+
 function DashboardView() {
+  const {
+    summary,
+    members,
+    loading,
+    error,
+    retry,
+  } = useMembershipData();
+
+  const recentMembers =
+    useMemo(
+      () =>
+        [...members]
+          .sort(
+            (a, b) =>
+              new Date(
+                b.createdAt,
+              ).getTime() -
+              new Date(
+                a.createdAt,
+              ).getTime(),
+          )
+          .slice(0, 5),
+      [members],
+    );
+
   return (
     <div className="space-y-6">
       <Header
@@ -295,70 +574,139 @@ function DashboardView() {
         description="Administrative oversight of member records, categories, activation, renewal and membership lifecycle."
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {stats.map((item) => (
-          <StatCard
-            key={item.label}
-            label={item.label}
-            value={item.value}
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message={error}
+          onRetry={retry}
+        />
+      ) : summary ? (
+        <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label="Total Members"
+              value={summary.totalMembers}
+            />
+
+            <StatCard
+              label="Students"
+              value={summary.students}
+            />
+
+            <StatCard
+              label="Alumni"
+              value={summary.alumni}
+            />
+
+            <StatCard
+              label="Lecturers"
+              value={summary.lecturers}
+            />
+
+            <StatCard
+              label="Pending Members"
+              value={summary.pendingMembers}
+            />
+
+            <StatCard
+              label="Active Members"
+              value={summary.activeMembers}
+            />
+          </section>
+
+          <MemberTable
+            title="Recent Membership Records"
+            data={recentMembers}
           />
-        ))}
-      </section>
 
-      <MemberTable title="Recent Membership Records" />
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
+              <h2 className="text-lg font-black text-[#0B2633]">
+                Membership Lifecycle
+              </h2>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
-          <h2 className="text-lg font-black text-[#0B2633]">
-            Membership Lifecycle
-          </h2>
+              <div className="mt-5 space-y-3">
+                {[
+                  [
+                    "Applications",
+                    `${summary.pendingMembers} pending`,
+                  ],
+                  [
+                    "Activation",
+                    `${summary.activationPending} pending`,
+                  ],
+                  [
+                    "Activation Completed",
+                    `${summary.activationCompleted} completed`,
+                  ],
+                  [
+                    "Activation Expired",
+                    `${summary.activationExpired} expired`,
+                  ],
+                ].map(
+                  ([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between rounded-2xl bg-[#F8FBFC] px-4 py-3"
+                    >
+                      <span className="text-sm font-semibold text-black/55">
+                        {label}
+                      </span>
 
-          <div className="mt-5 space-y-3">
-            {[
-              ["Applications", "36 pending"],
-              ["Activation", "18 recently activated"],
-              ["Renewal", "42 due for review"],
-              ["Cards", "12 issued recently"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="flex items-center justify-between rounded-2xl bg-[#F8FBFC] px-4 py-3"
-              >
-                <span className="text-sm font-semibold text-black/55">
-                  {label}
-                </span>
-
-                <span className="text-sm font-black text-[#0B2633]">
-                  {value}
-                </span>
+                      <span className="text-sm font-black text-[#0B2633]">
+                        {value}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
-          <h2 className="text-lg font-black text-[#0B2633]">
-            Quick Access
-          </h2>
+            <div className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
+              <h2 className="text-lg font-black text-[#0B2633]">
+                Quick Access
+              </h2>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {[
-              ["All Members", "/administration/members"],
-              ["Pending Applications", "/administration/membership/pending"],
-              ["Activation", "/administration/membership/activation"],
-              ["Renewal", "/administration/membership/renewal"],
-            ].map(([label, href]) => (
-              <Link
-                key={href}
-                href={href}
-                className="rounded-2xl border border-black/[0.06] bg-[#F8FBFC] px-4 py-4 text-sm font-bold text-[#0B2633] transition hover:border-[#CE26A4]/20 hover:bg-[#FFF7FC]"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  [
+                    "All Members",
+                    "/administration/members",
+                  ],
+                  [
+                    "Pending Applications",
+                    "/administration/membership/pending",
+                  ],
+                  [
+                    "Activation",
+                    "/administration/membership/activation",
+                  ],
+                  [
+                    "Renewal",
+                    "/administration/membership/renewal",
+                  ],
+                ].map(
+                  ([label, href]) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="rounded-2xl border border-black/[0.06] bg-[#F8FBFC] px-4 py-4 text-sm font-bold text-[#0B2633] transition hover:border-[#CE26A4]/20 hover:bg-[#FFF7FC]"
+                    >
+                      {label}
+                    </Link>
+                  ),
+                )}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : (
+        <EmptyState
+          title="Membership summary unavailable"
+          description="The system returned no membership summary."
+        />
+      )}
     </div>
   );
 }
@@ -370,24 +718,88 @@ function CategoryView({
 }: {
   title: string;
   description: string;
-  category: string;
+  category: MemberCategory;
 }) {
-  const filtered = members.filter(
-    (item) => item.category === category,
+  const {
+    summary,
+    members,
+    loading,
+    error,
+    retry,
+  } = useMembershipData();
+
+  const filtered = useMemo(
+    () =>
+      members.filter(
+        (item) =>
+          item.category === category,
+      ),
+    [members, category],
   );
+
+  const categoryCount =
+    category === "STUDENT"
+      ? summary?.students ?? 0
+      : category === "ALUMNI"
+        ? summary?.alumni ?? 0
+        : summary?.lecturers ?? 0;
+
+  const activeCount =
+    filtered.filter(
+      (item) =>
+        item.status === "ACTIVE",
+    ).length;
+
+  const pendingCount =
+    filtered.filter(
+      (item) =>
+        item.status === "PENDING",
+    ).length;
 
   return (
     <div className="space-y-6">
-      <Header title={title} description={description} />
+      <Header
+        title={title}
+        description={description}
+      />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Category Members" value={String(filtered.length + 120)} />
-        <StatCard label="Active" value={String(filtered.length + 108)} />
-        <StatCard label="Pending" value={String(filtered.length + 4)} />
-        <StatCard label="Current Period" value="2026/27" />
-      </section>
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message={error}
+          onRetry={retry}
+        />
+      ) : (
+        <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Category Members"
+              value={categoryCount}
+            />
 
-      <MemberTable title={`${category} Members`} data={filtered.length ? filtered : members} />
+            <StatCard
+              label="Active"
+              value={activeCount}
+            />
+
+            <StatCard
+              label="Pending"
+              value={pendingCount}
+            />
+
+            <StatCard
+              label="Current Records"
+              value={filtered.length}
+            />
+          </section>
+
+          <MemberTable
+            title={`${formatCategory(category)} Members`}
+            data={filtered}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -399,39 +811,90 @@ function StatusView({
 }: {
   title: string;
   description: string;
-  status: string;
+  status: MemberStatus;
 }) {
+  const {
+    members,
+    loading,
+    error,
+    retry,
+  } = useMembershipData();
+
+  const filtered = useMemo(
+    () =>
+      members.filter(
+        (item) =>
+          item.status === status,
+      ),
+    [members, status],
+  );
+
   return (
     <div className="space-y-6">
-      <Header title={title} description={description} />
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Records" value="124" />
-        <StatCard label="Current Period" value="2026/27" />
-        <StatCard label="Requiring Review" value="14" />
-      </section>
-
-      <MemberTable
-        title={`${status} Members`}
-        data={members
-          .filter((item) =>
-            status === "Active"
-              ? item.status === "Active"
-              : item.status !== "Active",
-          )
-          .map((item) => ({
-            ...item,
-            status:
-              status === "Active"
-                ? "Active"
-                : status,
-          }))}
+      <Header
+        title={title}
+        description={description}
       />
+
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message={error}
+          onRetry={retry}
+        />
+      ) : (
+        <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              label="Records"
+              value={filtered.length}
+            />
+
+            <StatCard
+              label="Current Records"
+              value={filtered.length}
+            />
+
+            <StatCard
+              label="Requiring Review"
+              value={
+                status === "PENDING" ||
+                status === "SUSPENDED"
+                  ? filtered.length
+                  : 0
+              }
+            />
+          </section>
+
+          <MemberTable
+            title={`${formatStatus(status)} Members`}
+            data={filtered}
+          />
+        </>
+      )}
     </div>
   );
 }
 
 function PendingView() {
+  const {
+    members,
+    loading,
+    error,
+    retry,
+  } = useMembershipData();
+
+  const pendingMembers =
+    useMemo(
+      () =>
+        members.filter(
+          (item) =>
+            item.status === "PENDING",
+        ),
+      [members],
+    );
+
   return (
     <div className="space-y-6">
       <Header
@@ -439,37 +902,60 @@ function PendingView() {
         description="Review applications that are waiting for membership approval or additional information."
       />
 
-      <section className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
-        <div className="space-y-3">
-          {pending.map((item) => (
-            <div
-              key={item.name}
-              className="flex flex-col gap-4 rounded-2xl bg-[#F8FBFC] p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="text-sm font-black text-[#0B2633]">
-                  {item.name}
-                </p>
-
-                <p className="mt-1 text-xs text-black/45">
-                  {item.category} • Submitted {item.submitted}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <StatusBadge value={item.status} />
-
-                <button
-                  type="button"
-                  className="rounded-xl bg-[#0B2633] px-4 py-2 text-xs font-black text-white"
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState
+          message={error}
+          onRetry={retry}
+        />
+      ) : pendingMembers.length ===
+        0 ? (
+        <EmptyState
+          title="No pending applications"
+          description="There are currently no members awaiting approval."
+        />
+      ) : (
+        <section className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
+          <div className="space-y-3">
+            {pendingMembers.map(
+              (item) => (
+                <div
+                  key={item.id}
+                  className="flex flex-col gap-4 rounded-2xl bg-[#F8FBFC] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  Review
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+                  <div>
+                    <p className="text-sm font-black text-[#0B2633]">
+                      {getMemberName(item)}
+                    </p>
+
+                    <p className="mt-1 text-xs text-black/45">
+                      {formatCategory(
+                        item.category,
+                      )}{" "}
+                      •{" "}
+                      {getMemberNumber(
+                        item,
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <StatusBadge value="Pending" />
+
+                    <Link
+                      href={`/administration/members?member=${item.id}`}
+                      className="rounded-xl bg-[#0B2633] px-4 py-2 text-xs font-black text-white"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -485,30 +971,35 @@ function OperationalView({
 }) {
   return (
     <div className="space-y-6">
-      <Header title={title} description={description} />
+      <Header
+        title={title}
+        description={description}
+      />
 
       <section className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
         <div className="space-y-3">
-          {items.map((item, index) => (
-            <div
-              key={item}
-              className="flex items-start gap-4 rounded-2xl border border-black/[0.05] p-4"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#CE26A4]/10 text-xs font-black text-[#CE26A4]">
-                {index + 1}
-              </span>
+          {items.map(
+            (item, index) => (
+              <div
+                key={item}
+                className="flex items-start gap-4 rounded-2xl border border-black/[0.05] p-4"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#CE26A4]/10 text-xs font-black text-[#CE26A4]">
+                  {index + 1}
+                </span>
 
-              <div>
-                <p className="text-sm font-black text-[#0B2633]">
-                  {item}
-                </p>
+                <div>
+                  <p className="text-sm font-black text-[#0B2633]">
+                    {item}
+                  </p>
 
-                <p className="mt-1 text-xs text-black/40">
-                  Development placeholder • Backend integration pending
-                </p>
+                  <p className="mt-1 text-xs text-black/40">
+                    Development placeholder • Backend integration pending
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       </section>
     </div>
@@ -523,28 +1014,10 @@ function RequestsView() {
         description="Manage requests submitted by members and route them to the appropriate administrative process."
       />
 
-      <section className="space-y-3">
-        {requests.map((item) => (
-          <div
-            key={`${item.request}-${item.member}`}
-            className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-black text-[#0B2633]">
-                  {item.request}
-                </p>
-
-                <p className="mt-1 text-xs text-black/45">
-                  Member: {item.member}
-                </p>
-              </div>
-
-              <StatusBadge value={item.status} />
-            </div>
-          </div>
-        ))}
-      </section>
+      <EmptyState
+        title="No member requests available"
+        description="Request records will appear here once the requests workflow is connected to the backend."
+      />
     </div>
   );
 }
@@ -557,30 +1030,10 @@ function HistoryView() {
         description="Historical membership lifecycle activity and administrative changes."
       />
 
-      <section className="rounded-3xl bg-white p-6 ring-1 ring-black/[0.06]">
-        <div className="space-y-3">
-          {history.map((item, index) => (
-            <div
-              key={item}
-              className="flex items-start gap-4 rounded-2xl bg-[#F8FBFC] p-4"
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#CE26A4]/10 text-xs font-black text-[#CE26A4]">
-                {index + 1}
-              </div>
-
-              <div>
-                <p className="text-sm font-black text-[#0B2633]">
-                  {item}
-                </p>
-
-                <p className="mt-1 text-xs text-black/40">
-                  Synthetic historical record
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <EmptyState
+        title="Membership history is not connected yet"
+        description="Historical lifecycle records will appear here once the history endpoint is connected."
+      />
     </div>
   );
 }
@@ -594,7 +1047,7 @@ export default function AdministrationMembershipWorkspace({
         <CategoryView
           title="Students"
           description="Manage the student membership population."
-          category="Student"
+          category="STUDENT"
         />
       );
 
@@ -603,7 +1056,7 @@ export default function AdministrationMembershipWorkspace({
         <CategoryView
           title="Alumni"
           description="Manage alumni membership records and status."
-          category="Alumni"
+          category="ALUMNI"
         />
       );
 
@@ -612,7 +1065,7 @@ export default function AdministrationMembershipWorkspace({
         <CategoryView
           title="Lecturers"
           description="Manage lecturer membership records."
-          category="Lecturer"
+          category="LECTURER"
         />
       );
 
@@ -624,7 +1077,7 @@ export default function AdministrationMembershipWorkspace({
         <StatusView
           title="Active Members"
           description="View members with an active membership status."
-          status="Active"
+          status="ACTIVE"
         />
       );
 
@@ -633,7 +1086,7 @@ export default function AdministrationMembershipWorkspace({
         <StatusView
           title="Expired Members"
           description="Review members whose current membership period has expired."
-          status="Expired"
+          status="INACTIVE"
         />
       );
 
@@ -642,7 +1095,7 @@ export default function AdministrationMembershipWorkspace({
         <StatusView
           title="Suspended Members"
           description="Review members whose membership access is currently suspended."
-          status="Suspended"
+          status="SUSPENDED"
         />
       );
 

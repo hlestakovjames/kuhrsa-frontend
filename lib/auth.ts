@@ -6,26 +6,61 @@ export type PortalType =
 export type AuthUser = {
   id: string;
   organizationId: string;
+
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+
   email: string;
+  phone?: string | null;
+
   status: string;
   isSystemOwner: boolean;
   lastLoginAt?: string | null;
+
   organization?: {
     id: string;
     name: string;
     code: string;
   } | null;
+
   member?: {
     id: string;
+
     registrationNumber?: string | null;
+    admissionNumber?: string | null;
+
     memberNumber: string;
+    category: string;
+
+    yearOfStudy?: number | null;
+    graduationYear?: number | null;
+
+    nationalId?: string | null;
+    staffNumber?: string | null;
+
+    position?: string | null;
+
+    programme?: string | null;
+    faculty?: string | null;
+    department?: string | null;
+
     status: string;
+    source: string;
+    activationStatus: string;
   } | null;
+
   roles: Array<{
     id: string;
     name: string;
     code: string;
   }>;
+
+  dashboards?: Array<
+    "member" |
+    "executive" |
+    "administration"
+  >;
 };
 
 export type LoginResponse = {

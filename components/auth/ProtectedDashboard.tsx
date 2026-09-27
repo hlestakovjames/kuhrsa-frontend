@@ -90,9 +90,61 @@ type ProtectedDashboardProps = {
   memberView?: MemberView;
 };
 
-type DashboardResponse = {
-  portal: PortalType;
-  message: string;
+type MemberDashboardMember = {
+  id: string;
+  memberNumber: string;
+
+  category: string;
+  constitutionalCategory: string;
+
+  status: string;
+  activationStatus: string;
+
+  goodStandingStatus: string;
+  financialStatus: string;
+  disciplinaryStatus: string;
+
+  registrationNumber: string | null;
+  admissionNumber: string | null;
+  nationalId: string | null;
+  staffNumber: string | null;
+
+  position: string | null;
+
+  yearOfStudy: number | null;
+  graduationYear: number | null;
+
+  programme: string | null;
+  faculty: string | null;
+  department: string | null;
+
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  county: string | null;
+
+  source: string;
+
+  organization: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
+
+  membershipPeriod: {
+    id: string;
+    membershipYear: string;
+    startsAt: string;
+    endsAt: string;
+    status: string;
+    activatedAt: string | null;
+  } | null;
+};
+
+type MemberDashboardResponse = {
+  portal: "member";
+  message?: string;
+
   user: {
     id: string;
     email: string;
@@ -100,6 +152,43 @@ type DashboardResponse = {
     roles?: string[];
     isSystemOwner?: boolean;
   };
+
+  member: MemberDashboardMember | null;
+};
+
+type ExecutiveDashboardResponse = {
+  portal: "executive";
+  message: string;
+
+  user: {
+    id: string;
+    email: string;
+    member?: AuthUser["member"];
+    roles?: string[];
+    isSystemOwner?: boolean;
+  };
+};
+
+type AdministrationDashboardResponse = {
+  portal: "administration";
+  message: string;
+
+  user: {
+    id: string;
+    email: string;
+    member?: AuthUser["member"];
+    roles?: string[];
+    isSystemOwner?: boolean;
+  };
+};
+
+type DashboardResponse =
+  | MemberDashboardResponse
+  | ExecutiveDashboardResponse
+  | AdministrationDashboardResponse;
+
+type DashboardErrorResponse = {
+  message?: string;
 };
 
 const dashboardEndpoints: Record<
@@ -378,25 +467,33 @@ export default function ProtectedDashboard({
           },
         );
 
-        const data =
-          (await response.json()) as
-            | DashboardResponse
-            | { message?: string };
+        const rawData =
+          await response.json();
 
         if (!response.ok) {
+          const errorData =
+            rawData as DashboardErrorResponse;
+
           throw new Error(
-            "message" in data &&
-              data.message
-              ? data.message
-              : "Unable to load your dashboard.",
+            errorData.message ??
+              "Unable to load your dashboard.",
+          );
+        }
+
+        const data =
+          rawData as DashboardResponse;
+
+        if (
+          data.portal !== portal
+        ) {
+          throw new Error(
+            "The dashboard response did not match the requested portal.",
           );
         }
 
         if (mounted) {
           setUser(authenticatedUser);
-          setDashboard(
-            data as DashboardResponse,
-          );
+          setDashboard(data);
         }
       } catch (dashboardError) {
         if (mounted) {
@@ -506,17 +603,23 @@ export default function ProtectedDashboard({
 
   let workspace: React.ReactNode;
 
-  if (portal === "executive") {
+  if (
+    portal === "executive" &&
+    dashboard.portal === "executive"
+  ) {
     workspace = (
       <ExecutiveDashboardWorkspace
         user={user}
         dashboard={dashboard}
       />
     );
-  } else if (portal === "administration") {
+  } else if (
+    portal === "administration" &&
+    dashboard.portal === "administration"
+  ) {
     workspace = (
       <ExistingPortalWorkspace
-        portal={portal}
+        portal="administration"
         title={title}
         description={description}
         dashboard={dashboard}
@@ -528,12 +631,15 @@ export default function ProtectedDashboard({
       />
     );
   } else if (
+    portal === "member" &&
+    dashboard.portal === "member" &&
     memberView === "overview" &&
     title === "Member Dashboard"
   ) {
     workspace = (
       <MemberDashboardWorkspace
         user={user}
+        dashboard={dashboard}
       />
     );
   } else if (
@@ -647,10 +753,10 @@ function ExistingPortalWorkspace({
   member,
   isSystemOwner,
 }: {
-  portal: PortalType;
+  portal: "administration";
   title: string;
   description: string;
-  dashboard: DashboardResponse;
+  dashboard: AdministrationDashboardResponse;
   user: AuthUser;
   member: AuthUser["member"];
   isSystemOwner: boolean;
@@ -668,9 +774,7 @@ function ExistingPortalWorkspace({
               <span className="h-2 w-2 rounded-full bg-[#168DB8]" />
 
               <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/70">
-                {portal === "executive"
-                  ? "Executive Portal"
-                  : "Administration Portal"}
+                Administration Portal
               </span>
             </div>
 
@@ -738,101 +842,51 @@ function ExistingPortalWorkspace({
         />
       </section>
 
-      {portal === "executive" && (
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <QuickLinks
-            title="Executive Workspace"
-            links={[
-              {
-                title: "Members",
-                href: "/executive/members",
-              },
-              {
-                title: "Membership",
-                href: "/executive/membership",
-              },
-              {
-                title: "Events",
-                href: "/executive/events",
-              },
-              {
-                title: "Activities",
-                href: "/executive/activities",
-              },
-            ]}
-          />
+      <section className="mt-6 grid gap-6 lg:grid-cols-2">
+        <QuickLinks
+          title="Administration"
+          links={[
+            {
+              title: "Members",
+              href: "/administration/members",
+            },
+            {
+              title: "Users",
+              href: "/administration/users",
+            },
+            {
+              title: "Notifications",
+              href: "/administration/notifications",
+            },
+            {
+              title: "Departments",
+              href: "/administration/departments",
+            },
+          ]}
+        />
 
-          <QuickLinks
-            title="Executive Information"
-            links={[
-              {
-                title: "Announcements",
-                href: "/executive/communication/announcements",
-              },
-              {
-                title: "Reports",
-                href: "/executive/reports",
-              },
-              {
-                title: "Departments",
-                href: "/departments",
-              },
-              {
-                title: "Resources",
-                href: "/resources",
-              },
-            ]}
-          />
-        </section>
-      )}
-
-      {portal === "administration" && (
-        <section className="mt-6 grid gap-6 lg:grid-cols-2">
-          <QuickLinks
-            title="Administration"
-            links={[
-              {
-                title: "Members",
-                href: "/administration/members",
-              },
-              {
-                title: "Users",
-                href: "/administration/users",
-              },
-              {
-                title: "Notifications",
-                href: "/administration/notifications",
-              },
-              {
-                title: "Departments",
-                href: "/administration/departments",
-              },
-            ]}
-          />
-
-          <QuickLinks
-            title="Management"
-            links={[
-              {
-                title: "Finance",
-                href: "/administration/finance",
-              },
-              {
-                title: "Content",
-                href: "/administration/content",
-              },
-              {
-                title: "Reports",
-                href: "/administration/reports",
-              },
-              {
-                title: "System",
-                href: "/administration/system",
-              },
-            ]}
-          />
-        </section>
-      )}
+        <QuickLinks
+          title="Management"
+          links={[
+            {
+              title: "Finance",
+              href: "/administration/finance",
+            },
+            {
+              title: "Content",
+              href: "/administration/content",
+            },
+            {
+              title: "Reports",
+              href: "/administration/reports",
+            },
+            {
+              title: "System",
+              href: "/administration/system",
+            },
+          ]}
+        />
+      </section>
     </div>
   );
 }

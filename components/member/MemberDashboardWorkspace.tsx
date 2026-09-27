@@ -3,34 +3,145 @@
 import Link from "next/link";
 
 import type { AuthUser } from "@/lib/auth";
-import { memberDashboardMock } from "@/lib/mock/member-dashboard";
+
+type MemberDashboard = {
+  portal: "member";
+
+  user: {
+    id: string;
+    email?: string;
+  };
+
+  member: {
+    id: string;
+    memberNumber: string;
+
+    category: string;
+    constitutionalCategory: string;
+
+    status: string;
+    activationStatus: string;
+
+    goodStandingStatus: string;
+    financialStatus: string;
+    disciplinaryStatus: string;
+
+    registrationNumber: string | null;
+    admissionNumber: string | null;
+    nationalId: string | null;
+    staffNumber: string | null;
+
+    position: string | null;
+
+    yearOfStudy: number | null;
+    graduationYear: number | null;
+
+    programme: string | null;
+    faculty: string | null;
+    department: string | null;
+
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    county: string | null;
+
+    source: string;
+
+    organization: {
+      id: string;
+      name: string;
+      code: string;
+    } | null;
+
+    membershipPeriod: {
+      id: string;
+      membershipYear: string;
+      startsAt: string;
+      endsAt: string;
+      status: string;
+      activatedAt: string | null;
+    } | null;
+  } | null;
+};
 
 type MemberDashboardWorkspaceProps = {
   user: AuthUser;
+  dashboard: MemberDashboard;
 };
 
-function firstName(user: AuthUser) {
-  const source =
-    user.member?.registrationNumber ||
-    user.email.split("@")[0] ||
-    "Member";
+function displayName(user: AuthUser) {
+  const parts = [
+    user.firstName,
+    user.middleName,
+    user.lastName,
+  ].filter(
+    (value): value is string =>
+      Boolean(value?.trim()),
+  );
 
-  const cleaned = source
-    .replace(/[._-]+/g, " ")
-    .trim();
+  if (parts.length > 0) {
+    return parts.join(" ");
+  }
 
-  return cleaned
-    .split(/\s+/)[0]
-    .replace(/^\w/, (value) =>
-      value.toUpperCase(),
+  return "Member";
+}
+
+function statusLabel(
+  status?: string | null,
+) {
+  if (!status) {
+    return "Not available";
+  }
+
+  return status
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
     );
 }
 
-function formatCurrency(
-  value: number,
-  currency: string,
+function valueOrUnavailable(
+  value?: string | number | null,
 ) {
-  return `${currency} ${value.toLocaleString("en-KE")}`;
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "Not available";
+  }
+
+  return String(value);
+}
+
+function formatDate(
+  value?: string | null,
+) {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+
+  return date.toLocaleDateString(
+    "en-KE",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    },
+  );
+}
+
+function categoryLabel(
+  category?: string | null,
+) {
+  return statusLabel(category);
 }
 
 function StatIcon({
@@ -70,7 +181,13 @@ function StatIcon({
           stroke="currentColor"
           strokeWidth="1.8"
         >
-          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <rect
+            x="3"
+            y="5"
+            width="18"
+            height="14"
+            rx="2"
+          />
           <path d="M3 10h18M7 15h4" />
         </svg>
       );
@@ -84,7 +201,13 @@ function StatIcon({
           stroke="currentColor"
           strokeWidth="1.8"
         >
-          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <rect
+            x="3"
+            y="5"
+            width="18"
+            height="16"
+            rx="2"
+          />
           <path d="M7 3v4M17 3v4M3 10h18" />
         </svg>
       );
@@ -177,7 +300,7 @@ function StatCard({
         {title}
       </p>
 
-      <p className="mt-2 text-2xl font-black tracking-tight text-[#0B2633]">
+      <p className="mt-2 break-words text-2xl font-black tracking-tight text-[#0B2633]">
         {value}
       </p>
 
@@ -188,16 +311,75 @@ function StatCard({
   );
 }
 
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-black/[0.05] bg-[#F8FBFC] p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-black/35">
+        {label}
+      </p>
+
+      <p className="mt-1.5 break-words text-sm font-bold text-[#0B2633]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export default function MemberDashboardWorkspace({
   user,
+  dashboard,
 }: MemberDashboardWorkspaceProps) {
-  const first = firstName(user);
-  const mock = memberDashboardMock;
+  const member = dashboard.member;
+  const name = displayName(user);
+
+  if (!member) {
+    return (
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <section className="overflow-hidden rounded-3xl bg-[#0B2633] px-6 py-8 text-white shadow-[0_18px_50px_rgba(11,38,51,0.14)] sm:px-8">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300/80">
+            Member Portal
+          </p>
+
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+            Welcome, {name}
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">
+            Your KUHRSA account is authenticated,
+            but it is not currently linked to a
+            membership record.
+          </p>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <p className="text-sm font-black text-amber-900">
+            Membership record unavailable
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-amber-800">
+            Please contact KUHRSA administration
+            if you believe your membership should
+            already be linked to this account.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  const membershipPeriod =
+    member.membershipPeriod;
 
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <section className="relative overflow-hidden rounded-3xl bg-[#0B2633] px-6 py-7 text-white shadow-[0_18px_50px_rgba(11,38,51,0.14)] sm:px-8 sm:py-8">
         <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#168DB8]/20 blur-3xl" />
+
         <div className="absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
 
         <div className="relative">
@@ -208,13 +390,13 @@ export default function MemberDashboardWorkspace({
           <div className="mt-2 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                Welcome, {first}
+                Welcome, {name}
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">
-                Manage your membership, payments,
-                participation and KUHRSA activities
-                from one secure workspace.
+                Your KUHRSA membership information,
+                status, and member services are shown
+                below using your current account record.
               </p>
             </div>
 
@@ -224,14 +406,26 @@ export default function MemberDashboardWorkspace({
               </p>
 
               <p className="mt-1 text-sm font-black">
-                {mock.membership.memberType}
+                {categoryLabel(member.category)} Member
               </p>
 
               <div className="mt-1 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    member.status === "ACTIVE"
+                      ? "bg-emerald-400"
+                      : "bg-amber-400"
+                  }`}
+                />
 
-                <span className="text-xs font-semibold text-emerald-300">
-                  {mock.membership.status}
+                <span
+                  className={`text-xs font-semibold ${
+                    member.status === "ACTIVE"
+                      ? "text-emerald-300"
+                      : "text-amber-300"
+                  }`}
+                >
+                  {statusLabel(member.status)}
                 </span>
               </div>
             </div>
@@ -242,57 +436,48 @@ export default function MemberDashboardWorkspace({
       <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard
           title="Membership"
-          value={mock.membership.label}
-          subtitle={mock.membership.status}
+          value={statusLabel(member.status)}
+          subtitle={statusLabel(member.activationStatus)}
           href="/dashboard/membership"
           icon="membership"
         />
 
         <StatCard
-          title="Balance"
-          value={formatCurrency(
-            mock.finance.balance,
-            mock.finance.currency,
-          )}
-          subtitle="Outstanding balance"
-          href="/dashboard/finance/balance"
+          title="Finance"
+          value={statusLabel(member.financialStatus)}
+          subtitle="Current financial status"
+          href="/dashboard/finance"
           icon="finance"
         />
 
         <StatCard
           title="Upcoming Events"
-          value={String(
-            mock.events.count,
-          )}
-          subtitle="Scheduled opportunities"
+          value="Not available"
+          subtitle="No event data connected yet"
           href="/dashboard/events/upcoming"
           icon="events"
         />
 
         <StatCard
           title="Activities"
-          value={String(
-            mock.activities.count,
-          )}
-          subtitle="Current registrations"
+          value="Not available"
+          subtitle="No activity data connected yet"
           href="/dashboard/activities"
           icon="activities"
         />
 
         <StatCard
           title="Attendance"
-          value={`${mock.attendance.percentage}%`}
-          subtitle={`${mock.attendance.attended} of ${mock.attendance.total} recorded`}
+          value="Not available"
+          subtitle="No attendance data connected yet"
           href="/dashboard/events/attendance"
           icon="attendance"
         />
 
         <StatCard
           title="Notifications"
-          value={String(
-            mock.notifications.count,
-          )}
-          subtitle="Recent notifications"
+          value="Not available"
+          subtitle="No notification summary connected yet"
           href="/dashboard/communication/notifications"
           icon="notifications"
         />
@@ -307,271 +492,315 @@ export default function MemberDashboardWorkspace({
               </p>
 
               <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
-                Digital Membership Card
+                Membership Information
               </h2>
             </div>
-
-            <Link
-              href="/dashboard/membership/card"
-              className="text-xs font-black text-[#168DB8] hover:underline"
-            >
-              Open Card
-            </Link>
-          </div>
-
-          <div className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0B2633] to-[#124861] p-6 text-white">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">
-                  KUHRSA Digital Membership
-                </p>
-
-                <p className="mt-3 text-xl font-black">
-                  {mock.membership.memberType}
-                </p>
-
-                <div className="mt-4 space-y-1.5">
-                  <p className="text-sm text-white/75">
-                    Member account
-                  </p>
-
-                  <p className="text-xs text-white/45">
-                    Valid until{" "}
-                    {mock.membership.validUntil}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex h-32 w-32 shrink-0 items-center justify-center rounded-2xl bg-white p-4">
-                <div className="grid grid-cols-7 gap-1 opacity-80">
-                  {Array.from({
-                    length: 49,
-                  }).map((_, index) => (
-                    <span
-                      key={index}
-                      className={`h-2 w-2 ${
-                        (index * 7 + index) % 3 ===
-                          0 ||
-                        (index + 2) % 5 === 0
-                          ? "bg-[#0B2633]"
-                          : "bg-black/10"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_30px_rgba(11,38,51,0.04)]">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
-                Quick Access
-              </p>
-
-              <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
-                Common Actions
-              </h2>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-2">
-            <Link
-              href="/dashboard/finance/payment"
-              className="flex items-center justify-between rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
-            >
-              Make Payment
-
-              <span className="text-[#168DB8]">
-                →
-              </span>
-            </Link>
 
             <Link
               href="/dashboard/membership/profile"
-              className="flex items-center justify-between rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
+              className="text-xs font-black text-[#168DB8] hover:underline"
             >
-              Update Profile
-
-              <span className="text-[#168DB8]">
-                →
-              </span>
+              View Profile
             </Link>
+          </div>
 
-            <Link
-              href="/dashboard/events/upcoming"
-              className="flex items-center justify-between rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
-            >
-              Browse Events
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <DetailRow
+              label="Member Number"
+              value={member.memberNumber}
+            />
 
-              <span className="text-[#168DB8]">
-                →
-              </span>
-            </Link>
+            <DetailRow
+              label="Category"
+              value={categoryLabel(member.category)}
+            />
 
-            <Link
-              href="/dashboard/services/submit"
-              className="flex items-center justify-between rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
-            >
-              Submit a Request
+            <DetailRow
+              label="Membership Status"
+              value={statusLabel(member.status)}
+            />
 
-              <span className="text-[#168DB8]">
-                →
-              </span>
-            </Link>
+            <DetailRow
+              label="Activation Status"
+              value={statusLabel(
+                member.activationStatus,
+              )}
+            />
+
+            <DetailRow
+              label="Good Standing"
+              value={statusLabel(
+                member.goodStandingStatus,
+              )}
+            />
+
+            <DetailRow
+              label="Financial Status"
+              value={statusLabel(
+                member.financialStatus,
+              )}
+            />
+
+            <DetailRow
+              label="Disciplinary Status"
+              value={statusLabel(
+                member.disciplinaryStatus,
+              )}
+            />
+
+            <DetailRow
+              label="Constitutional Category"
+              value={statusLabel(
+                member.constitutionalCategory,
+              )}
+            />
+          </div>
+
+          {membershipPeriod && (
+            <div className="mt-4 rounded-2xl bg-[#0B2633] p-5 text-white">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/40">
+                Membership Period
+              </p>
+
+              <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-white/40">
+                    Membership Year
+                  </p>
+
+                  <p className="mt-1 text-sm font-black">
+                    {membershipPeriod.membershipYear}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-white/40">
+                    Starts
+                  </p>
+
+                  <p className="mt-1 text-sm font-black">
+                    {formatDate(
+                      membershipPeriod.startsAt,
+                    )}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-white/40">
+                    Ends
+                  </p>
+
+                  <p className="mt-1 text-sm font-black">
+                    {formatDate(
+                      membershipPeriod.endsAt,
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!membershipPeriod && (
+            <div className="mt-4 rounded-2xl border border-black/[0.05] bg-[#F8FBFC] p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-black/35">
+                Membership Period
+              </p>
+
+              <p className="mt-2 text-sm font-bold text-[#0B2633]">
+                Not available
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-black/45">
+                No membership period is currently linked
+                to this member record.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_30px_rgba(11,38,51,0.04)]">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
+            Member Identity
+          </p>
+
+          <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
+            Your Details
+          </h2>
+
+          <div className="mt-5 space-y-3">
+            <DetailRow
+              label="Registration Number"
+              value={valueOrUnavailable(
+                member.registrationNumber,
+              )}
+            />
+
+            <DetailRow
+              label="Admission Number"
+              value={valueOrUnavailable(
+                member.admissionNumber,
+              )}
+            />
+
+            <DetailRow
+              label="National ID"
+              value={valueOrUnavailable(
+                member.nationalId,
+              )}
+            />
+
+            <DetailRow
+              label="Staff Number"
+              value={valueOrUnavailable(
+                member.staffNumber,
+              )}
+            />
+
+            <DetailRow
+              label="Source"
+              value={statusLabel(member.source)}
+            />
           </div>
         </div>
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_30px_rgba(11,38,51,0.04)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
-                Upcoming
-              </p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
+            Academic & Professional
+          </p>
 
-              <h2 className="mt-1 text-xl font-black text-[#0B2633]">
-                Events
-              </h2>
-            </div>
+          <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
+            Member Information
+          </h2>
 
-            <Link
-              href="/dashboard/events"
-              className="text-xs font-black text-[#168DB8]"
-            >
-              View all
-            </Link>
-          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <DetailRow
+              label="Programme"
+              value={valueOrUnavailable(
+                member.programme,
+              )}
+            />
 
-          <div className="mt-5 space-y-3">
-            {mock.events.items.map(
-              (event) => (
-                <div
-                  key={event.id}
-                  className="rounded-xl border border-black/[0.05] p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-black text-[#0B2633]">
-                        {event.title}
-                      </p>
+            <DetailRow
+              label="Faculty / School"
+              value={valueOrUnavailable(
+                member.faculty,
+              )}
+            />
 
-                      <p className="mt-1 text-xs font-medium text-black/45">
-                        {event.date} ·{" "}
-                        {event.time}
-                      </p>
-                    </div>
+            <DetailRow
+              label="Department"
+              value={valueOrUnavailable(
+                member.department,
+              )}
+            />
 
-                    <span className="rounded-full bg-[#168DB8]/10 px-2.5 py-1 text-[10px] font-black text-[#168DB8]">
-                      {event.category}
-                    </span>
-                  </div>
+            <DetailRow
+              label="Year of Study"
+              value={valueOrUnavailable(
+                member.yearOfStudy,
+              )}
+            />
 
-                  <p className="mt-3 text-xs text-black/40">
-                    {event.venue}
-                  </p>
-                </div>
-              ),
-            )}
+            <DetailRow
+              label="Graduation Year"
+              value={valueOrUnavailable(
+                member.graduationYear,
+              )}
+            />
+
+            <DetailRow
+              label="Position"
+              value={valueOrUnavailable(
+                member.position,
+              )}
+            />
           </div>
         </div>
 
         <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_30px_rgba(11,38,51,0.04)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
-                Recent
-              </p>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
+            Contact
+          </p>
 
-              <h2 className="mt-1 text-xl font-black text-[#0B2633]">
-                Announcements
-              </h2>
-            </div>
-
-            <Link
-              href="/dashboard/content/announcements"
-              className="text-xs font-black text-[#168DB8]"
-            >
-              View all
-            </Link>
-          </div>
+          <h2 className="mt-1 text-xl font-black tracking-tight text-[#0B2633]">
+            Contact Information
+          </h2>
 
           <div className="mt-5 space-y-3">
-            {mock.announcements.map(
-              (announcement) => (
-                <Link
-                  href="/dashboard/content/announcements"
-                  key={announcement.id}
-                  className="block rounded-xl border border-black/[0.05] p-4 transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/[0.02]"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <p className="text-sm font-black text-[#0B2633]">
-                      {announcement.title}
-                    </p>
+            <DetailRow
+              label="Email"
+              value={valueOrUnavailable(
+                member.email ?? user.email,
+              )}
+            />
 
-                    <span className="shrink-0 text-[10px] font-bold text-black/35">
-                      {announcement.date}
-                    </span>
-                  </div>
+            <DetailRow
+              label="Phone"
+              value={valueOrUnavailable(
+                member.phone,
+              )}
+            />
 
-                  <p className="mt-2 text-xs leading-5 text-black/45">
-                    {announcement.excerpt}
-                  </p>
-                </Link>
-              ),
-            )}
+            <DetailRow
+              label="Address"
+              value={valueOrUnavailable(
+                member.address,
+              )}
+            />
+
+            <DetailRow
+              label="County"
+              value={valueOrUnavailable(
+                member.county,
+              )}
+            />
           </div>
         </div>
       </section>
 
       <section className="mt-6 rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_8px_30px_rgba(11,38,51,0.04)]">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#168DB8]">
-              Recent
+              Workspace
             </p>
 
             <h2 className="mt-1 text-xl font-black text-[#0B2633]">
-              Notifications
+              Common Actions
             </h2>
           </div>
-
-          <Link
-            href="/dashboard/communication/notifications"
-            className="text-xs font-black text-[#168DB8]"
-          >
-            Open notifications
-          </Link>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {mock.notifications.items.map(
-            (notification) => (
-              <div
-                key={notification.id}
-                className="rounded-xl border border-black/[0.05] p-4"
-              >
-                <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#168DB8]">
-                  {notification.type}
-                </span>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/dashboard/membership/profile"
+            className="rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
+          >
+            View Membership Profile
+          </Link>
 
-                <p className="mt-2 text-sm font-black text-[#0B2633]">
-                  {notification.title}
-                </p>
+          <Link
+            href="/dashboard/membership/card"
+            className="rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
+          >
+            Membership Card
+          </Link>
 
-                <p className="mt-1 text-xs leading-5 text-black/45">
-                  {notification.body}
-                </p>
+          <Link
+            href="/dashboard/finance"
+            className="rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
+          >
+            Finance
+          </Link>
 
-                <p className="mt-3 text-[10px] font-bold text-black/30">
-                  {notification.time}
-                </p>
-              </div>
-            ),
-          )}
+          <Link
+            href="/dashboard/events"
+            className="rounded-xl border border-black/[0.05] px-4 py-3 text-sm font-bold text-[#0B2633] transition hover:border-[#168DB8]/20 hover:bg-[#168DB8]/5"
+          >
+            Events & Activities
+          </Link>
         </div>
       </section>
     </div>
