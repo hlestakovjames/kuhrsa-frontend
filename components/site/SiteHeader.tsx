@@ -15,6 +15,12 @@ type SiteNavigation = {
   items: NavItem[];
 };
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const mainNavigation: NavItem[] = [
   { label: "About", href: "/about" },
   { label: "Membership", href: "/membership" },
@@ -29,9 +35,9 @@ const mainNavigation: NavItem[] = [
 ];
 
 const quickLinks: NavItem[] = [
-  { label: "Member Portal", href: "/login" },
-  { label: "Executive Portal", href: "/executive" },
-  { label: "Administration", href: "/administration" },
+  { label: "Member Portal", href: PORTAL_LOGIN_URL },
+  { label: "Executive Portal", href: PORTAL_LOGIN_URL },
+  { label: "Administration", href: PORTAL_LOGIN_URL },
   { label: "Announcements", href: "/announcements" },
   { label: "Departments", href: "/departments" },
   { label: "Gallery", href: "/gallery" },
@@ -439,6 +445,10 @@ function shouldWrapNavigationLabel(label: string) {
   return label.length > 20;
 }
 
+function isExternalPortalLink(href: string) {
+  return href === PORTAL_LOGIN_URL;
+}
+
 export default function SiteHeader() {
   const pathname = usePathname();
 
@@ -461,7 +471,7 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/15 bg-[#2BB9EC] shadow-sm">
-      {/* Desktop Top Layer */}
+      {/* Desktop Top Layer / Utility Header */}
       <div className="hidden border-b border-white/15 bg-[#F700BA] xl:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-2 lg:px-8">
           <div className="relative">
@@ -491,7 +501,7 @@ export default function SiteHeader() {
                 role="menu"
               >
                 {quickLinks.map((item, index) => (
-                  <div key={item.href}>
+                  <div key={`${item.label}-${item.href}`}>
                     {index === 1 && (
                       <div className="my-2 border-t border-black/10 px-3 pt-2">
                         <span className="text-[10px] font-black uppercase tracking-[0.16em] text-black/40">
@@ -500,39 +510,45 @@ export default function SiteHeader() {
                       </div>
                     )}
 
-                    <Link
-                      href={item.href}
-                      target={
-                        item.href === "/login"
-                          ? "_blank"
-                          : undefined
-                      }
-                      rel={
-                        item.href === "/login"
-                          ? "noopener noreferrer"
-                          : undefined
-                      }
-                      onClick={() =>
-                        setQuickLinksOpen(false)
-                      }
-                      className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-[#0B2633] transition hover:bg-[#F4FAFC] hover:text-[#168DB8]"
-                      role="menuitem"
-                    >
-                      {item.label}
-                    </Link>
+                    {isExternalPortalLink(item.href) ? (
+                      <a
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          setQuickLinksOpen(false)
+                        }
+                        className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-[#0B2633] transition hover:bg-[#F4FAFC] hover:text-[#168DB8]"
+                        role="menuitem"
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        onClick={() =>
+                          setQuickLinksOpen(false)
+                        }
+                        className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-[#0B2633] transition hover:bg-[#F4FAFC] hover:text-[#168DB8]"
+                        role="menuitem"
+                      >
+                        {item.label}
+                      </Link>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Public Registration */}
           <Link
-            href="/register"
+            href={PORTAL_REGISTER_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-full bg-[#0B2633] px-5 py-2 text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-[#168DB8]"
           >
-            Join Us
+            Register
           </Link>
         </div>
       </div>
@@ -694,20 +710,32 @@ export default function SiteHeader() {
                 {mobileQuickLinksOpen && (
                   <div className="mt-1 rounded-2xl bg-white/10 p-2">
                     {quickLinks.map((item, index) => (
-                      <div key={item.href}>
+                      <div key={`${item.label}-${item.href}`}>
                         {index === 1 && (
                           <div className="px-3 pb-1 pt-3 text-[10px] font-black uppercase tracking-[0.16em] text-white/50">
                             Authorized Access
                           </div>
                         )}
 
-                        <Link
-                          href={item.href}
-                          onClick={handleMobileClose}
-                          className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-                        >
-                          {item.label}
-                        </Link>
+                        {isExternalPortalLink(item.href) ? (
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={handleMobileClose}
+                            className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                          >
+                            {item.label}
+                          </a>
+                        ) : (
+                          <Link
+                            href={item.href}
+                            onClick={handleMobileClose}
+                            className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                          >
+                            {item.label}
+                          </Link>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -739,13 +767,15 @@ export default function SiteHeader() {
                 })}
               </div>
 
-              {/* Mobile Join Us */}
+              {/* Mobile Public Registration */}
               <Link
-                href="/register"
+                href={PORTAL_REGISTER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={handleMobileClose}
                 className="mt-5 block rounded-full bg-[#0B2633] px-5 py-3 text-center text-sm font-black uppercase tracking-wide text-white transition hover:bg-[#168DB8]"
               >
-                Join Us
+                Register
               </Link>
             </nav>
           </div>

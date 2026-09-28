@@ -1,6 +1,12 @@
 import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const supportAreas = [
   {
     number: "01",
@@ -210,7 +216,9 @@ export default function MembershipSupportPage() {
           </Link>
 
           <Link
-            href="/login"
+            href={PORTAL_LOGIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
             className="rounded-[2rem] bg-[#0B2633] p-7 transition hover:-translate-y-1"
           >
             <p className="text-sm font-black uppercase tracking-[0.14em] text-[#2BB9EC]">

@@ -1,6 +1,12 @@
 import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 export default function MembershipPage() {
   const items = [
     "Why Join KUHRSA?",
@@ -54,12 +60,14 @@ export default function MembershipPage() {
             membership workflow.
           </p>
 
-          <Link
-            href="/register"
+          <a
+            href={PORTAL_REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-6 inline-block rounded-full bg-[#F700BA] px-6 py-3 font-bold text-white transition hover:bg-[#CE26A4]"
           >
             Register for Membership
-          </Link>
+          </a>
         </div>
 
         <div className="mt-6 rounded-[2rem] bg-[#F9B6F2] p-8">
@@ -70,12 +78,14 @@ export default function MembershipPage() {
             and activation flow.
           </p>
 
-          <Link
-            href="/login"
+          <a
+            href={PORTAL_LOGIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-6 inline-block rounded-full bg-[#168DB8] px-6 py-3 font-bold text-white transition hover:bg-[#11799F]"
           >
             Member Login
-          </Link>
+          </a>
         </div>
       </section>
     </>

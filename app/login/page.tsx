@@ -8,10 +8,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getLandingPath,
-  login,
-} from "@/lib/auth";
+
 
 type AccessMode =
   | "login"
@@ -323,63 +320,15 @@ export default function LoginPage() {
     setPaymentStepCompleted(false);
   };
 
-  const handleMemberLogin = async (
+  const handleMemberLogin = (
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
 
     setLoginError("");
 
-    if (
-      !loginIdentifier.trim() ||
-      !loginPassword
-    ) {
-      setLoginError(
-        "Enter your email or registration number and password.",
-      );
-      return;
-    }
-
-    setLoginLoading(true);
-
-    try {
-      const result = await login(
-        loginIdentifier,
-        loginPassword,
-      );
-
-      const hasPortalAccess =
-        result.user.isSystemOwner ||
-        result.user.roles.some(
-          (role) =>
-            role.code === "MEMBER" ||
-            role.code === "EXECUTIVE" ||
-            role.code ===
-              "ADMINISTRATOR" ||
-            role.code ===
-              "SUPER_ADMINISTRATOR",
-        );
-
-      if (!hasPortalAccess) {
-        throw new Error(
-          "Your account does not have active KUHRSA portal access.",
-        );
-      }
-
-      router.replace(
-        getLandingPath(
-          result.user,
-        ),
-      );
-    } catch (error) {
-      setLoginError(
-        error instanceof Error
-          ? error.message
-          : "Unable to sign in.",
-      );
-    } finally {
-      setLoginLoading(false);
-    }
+    window.location.href =
+      "https://kuhrsa-portal.vercel.app/login";
   };
 
   const validateActivationStep = (

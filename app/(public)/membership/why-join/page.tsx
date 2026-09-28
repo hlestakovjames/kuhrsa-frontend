@@ -1,6 +1,12 @@
 import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const reasons = [
   {
     title: "Grow Your HR Skills",
@@ -103,7 +109,9 @@ export default function WhyJoinPage() {
               </p>
 
               <Link
-                href="/register"
+                href={PORTAL_REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
                 className="mt-7 inline-block rounded-full bg-[#F700BA] px-6 py-3 font-bold text-white transition hover:bg-[#CE26A4]"
               >
                 Join KUHRSA

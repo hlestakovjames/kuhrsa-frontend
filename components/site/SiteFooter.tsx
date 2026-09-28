@@ -1,6 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const exploreLinks = [
   ["About", "/about"],
   ["Membership", "/membership"],
@@ -26,11 +32,6 @@ const quickLinks = [
   ["Departments", "/departments"],
   ["Gallery", "/gallery"],
   ["Downloads", "/resources/downloads"],
-];
-
-const portalLinks = [
-  ["Member Portal", "/login"],
-  ["Join Us", "/register"],
 ];
 
 export default function SiteFooter() {
@@ -62,10 +63,12 @@ export default function SiteFooter() {
           </p>
 
           <Link
-            href="/register"
+            href={PORTAL_REGISTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-6 inline-flex rounded-full bg-[#F700BA] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#CE26A4]"
           >
-            Join Us
+            Register
           </Link>
         </div>
 
@@ -137,15 +140,14 @@ export default function SiteFooter() {
           </p>
 
           <div className="mt-5 grid gap-3 text-sm">
-            {portalLinks.map(([label, href]) => (
-              <Link
-                key={href}
-                href={href}
-                className="font-semibold text-white/75 transition hover:text-white"
-              >
-                {label}
-              </Link>
-            ))}
+            <a
+              href={PORTAL_LOGIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-white/75 transition hover:text-white"
+            >
+              Member Portal
+            </a>
 
             {/* Authorized Access */}
             <div className="mt-2 border-t border-white/10 pt-4">
@@ -154,19 +156,23 @@ export default function SiteFooter() {
               </p>
 
               <div className="mt-3 grid gap-3">
-                <Link
-                  href="/executive"
+                <a
+                  href={PORTAL_LOGIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white/60 transition hover:text-white"
                 >
                   Executive Portal
-                </Link>
+                </a>
 
-                <Link
-                  href="/administration"
+                <a
+                  href={PORTAL_LOGIN_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-white/60 transition hover:text-white"
                 >
                   Administration
-                </Link>
+                </a>
               </div>
             </div>
           </div>

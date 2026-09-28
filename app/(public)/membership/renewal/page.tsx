@@ -1,6 +1,12 @@
 import Link from "next/link";
 import PageHero from "@/components/site/PageHero";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const steps = [
   {
     number: "01",
@@ -130,7 +136,9 @@ export default function MembershipRenewalPage() {
             </p>
 
             <Link
-              href="/login"
+              href={PORTAL_LOGIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-7 inline-block rounded-full bg-[#168DB8] px-6 py-3 font-bold text-white transition hover:bg-[#11799F]"
             >
               Member Login

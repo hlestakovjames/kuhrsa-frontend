@@ -5,6 +5,12 @@ import HeroSlider, {
   type HeroSlide,
 } from "@/components/site/HeroSlider";
 
+const PORTAL_LOGIN_URL =
+  "https://kuhrsa-portal.vercel.app/login";
+
+const PORTAL_REGISTER_URL =
+  "https://kuhrsa-portal.vercel.app/register";
+
 const heroSlides: HeroSlide[] = [
   {
     image: "/images/kuhrsa/general/HR.jpeg",
@@ -14,7 +20,7 @@ const heroSlides: HeroSlide[] = [
       "A student association built around community, engagement, academic development and growth.",
     cta: {
       label: "Register",
-      href: "/register",
+      href: PORTAL_REGISTER_URL,
     },
   },
   {
@@ -58,7 +64,7 @@ const heroSlides: HeroSlide[] = [
       "Find information, resources and meaningful ways to participate in KUHRSA.",
     cta: {
       label: "Join KUHRSA",
-      href: "/register",
+      href: PORTAL_REGISTER_URL,
     },
   },
 ];
@@ -276,12 +282,14 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  href="/register"
+                <a
+                  href={PORTAL_REGISTER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="rounded-full bg-[#168DB8] px-6 py-3 font-black text-white transition hover:bg-[#0B2633]"
                 >
                   Register
-                </Link>
+                </a>
 
                 <Link
                   href="/membership/benefits"
@@ -312,12 +320,14 @@ export default function HomePage() {
                 Sign in to access member services and your membership account.
               </p>
 
-              <Link
-                href="/login"
+              <a
+                href={PORTAL_LOGIN_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-7 inline-flex rounded-full bg-[#F700BA] px-6 py-3 font-bold text-white transition hover:bg-[#CE26A4]"
               >
                 Member Login
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -1106,12 +1116,14 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/register"
+                <a
+                  href={PORTAL_REGISTER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="rounded-full bg-[#F700BA] px-6 py-3 font-black text-white transition hover:bg-[#CE26A4]"
                 >
                   Become a Member
-                </Link>
+                </a>
 
                 <Link
                   href="/contact"
